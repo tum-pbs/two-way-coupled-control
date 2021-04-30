@@ -505,8 +505,8 @@ class TorchBackend(Backend):
         def cg_forward(y, x0, params: LinearSolve):
             tolerance_sq = self.maximum(params.relative_tolerance ** 2 * torch.sum(y ** 2, -1), params.absolute_tolerance ** 2)
             x = x0
-            dx = residual = y - function(x)
-            dy = function(dx)
+            p = residual = y - function(x) # b - A*x0
+            Ap = function(p) # A * (b - Ax0)
             iterations = 0
             converged = True
             while self.all(self.sum(residual ** 2, -1) > tolerance_sq):
@@ -514,14 +514,36 @@ class TorchBackend(Backend):
                     converged = False
                     break
                 iterations += 1
-                dx_dy = self.sum(dx * dy, axis=-1, keepdims=True)
-                step_size = self.divide_no_nan(self.sum(dx * residual, axis=-1, keepdims=True), dx_dy)
-                x += step_size * dx
-                residual -= step_size * dy
-                dx = residual - self.divide_no_nan(self.sum(residual * dy, axis=-1, keepdims=True) * dx, dx_dy)
-                dy = function(dx)
+                pAp = self.sum(p * Ap, axis=-1, keepdims=True)
+                step_size = self.divide_no_nan(self.sum(residual * residual, axis=-1, keepdims=True), pAp)
+                x += step_size * p
+                residual_next = residual - step_size * Ap
+                p = residual_next + self.divide_no_nan(self.sum(residual_next * residual_next, axis=-1, keepdims=True),self.sum(residual * residual, axis=-1, keepdims=True)) * p
+                Ap = function(p)
+                residual = residual_next
             params.result = SolveResult(converged, iterations)
             return x
+
+        # def cg_forward(y, x0, params: LinearSolve):
+        #     tolerance_sq = self.maximum(params.relative_tolerance ** 2 * torch.sum(y ** 2, -1), params.absolute_tolerance ** 2)
+        #     x = x0
+        #     dx = residual = y - function(x)
+        #     dy = function(dx)
+        #     iterations = 0
+        #     converged = True
+        #     while self.all(self.sum(residual ** 2, -1) > tolerance_sq):
+        #         if iterations == params.max_iterations:
+        #             converged = False
+        #             break
+        #         iterations += 1
+        #         dx_dy = self.sum(dx * dy, axis=-1, keepdims=True)
+        #         step_size = self.divide_no_nan(self.sum(dx * residual, axis=-1, keepdims=True), dx_dy)
+        #         x += step_size * dx
+        #         residual -= step_size * dy
+        #         dx = residual - self.divide_no_nan(self.sum(residual * dy, axis=-1, keepdims=True) * dx, dx_dy)
+        #         dy = function(dx)
+        #     params.result = SolveResult(converged, iterations)
+        #     return x
 
         class CGVariant(torch.autograd.Function):
 
