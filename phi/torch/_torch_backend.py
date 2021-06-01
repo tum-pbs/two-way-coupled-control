@@ -505,22 +505,27 @@ class TorchBackend(Backend):
         def cg_forward(y, x0, params: LinearSolve):
             tolerance_sq = self.maximum(params.relative_tolerance ** 2 * torch.sum(y ** 2, -1), params.absolute_tolerance ** 2)
             x = x0
-            p = residual = y - function(x) # b - A*x0
-            Ap = function(p) # A * (b - Ax0)
+            residual = d = y - function(x)
             iterations = 0
+            delta_new = self.sum(residual**2, -1)
             converged = True
             while self.all(self.sum(residual ** 2, -1) > tolerance_sq):
                 if iterations == params.max_iterations:
                     converged = False
                     break
+                q = function(d)
+                step_size = delta_new / self.sum(d * q, -1)
+                x = x + step_size * d
+                if (iterations % 50 == 0):
+                    residual = y - function(x)
+                else:
+                    residual = residual - step_size * q
+                delta_old = delta_new
+                delta_new = self.sum(residual**2, -1)
+                beta = delta_new / delta_old
+                d = residual + beta * d
                 iterations += 1
-                pAp = self.sum(p * Ap, axis=-1, keepdims=True)
-                step_size = self.divide_no_nan(self.sum(residual * residual, axis=-1, keepdims=True), pAp)
-                x += step_size * p
-                residual_next = residual - step_size * Ap
-                p = residual_next + self.divide_no_nan(self.sum(residual_next * residual_next, axis=-1, keepdims=True),self.sum(residual * residual, axis=-1, keepdims=True)) * p
-                Ap = function(p)
-                residual = residual_next
+            if torch.isnan(x).any(): converged = False
             params.result = SolveResult(converged, iterations)
             return x
 
@@ -547,15 +552,19 @@ class TorchBackend(Backend):
 
         class CGVariant(torch.autograd.Function):
 
-            @staticmethod
+            @ staticmethod
             def forward(ctx, y):
                 return cg_forward(y, x0, solve_params)
 
-            @staticmethod
+            @ staticmethod
             def backward(ctx, dX):
                 return cg_forward(dX, torch.zeros_like(x0), solve_params.gradient_solve)
 
+        # a = torch.cuda.memory_allocated()
         result = CGVariant.apply(y)
+        # b = torch.cuda.memory_allocated()
+        # print(f'{(b-a)}, {b} \n')
+        # return x0
         return result
 
     def functional_gradient(self, f, wrt: tuple or list, get_output: bool):

@@ -1,3 +1,6 @@
+myscripts/
+storage/
+phiflow2/*
 *.pyc
 *.tmp
 \.idea

@@ -54,14 +54,18 @@ def make_incompressible(velocity: Grid,
     pressure_guess = pressure_guess if pressure_guess is not None else domain.scalar_grid(0)
     converged, pressure, iterations = field.solve(laplace, y=div, x0=pressure_guess, solve_params=solve_params, constants=[active, hard_bcs])
     if math.all_available(converged) and not math.all(converged):
-        raise AssertionError(f"pressure solve did not converge after {iterations} iterations\nResult: {pressure.values}")
+        # Temporary fallback if not converged
+        converged, pressure, iterations = field.solve(laplace, y=div, x0=domain.scalar_grid(
+            field.Noise(pressure.shape, scale=1))/100., solve_params=solve_params, constants=[active, hard_bcs])
+        if math.all_available(converged) and not math.all(converged):
+            raise AssertionError(f"pressure solve did not converge after {iterations} iterations\nResult: {pressure.values}")
     # Subtract grad pressure
     gradp = field.spatial_gradient(pressure, type=type(velocity)) * hard_bcs
     velocity = (velocity - gradp).with_(extrapolation=input_velocity.extrapolation)
     return velocity, pressure, iterations, div
 
 
-def apply_boundary_conditions(velocity: Grid, domain : Domain, obstacles: tuple or list):
+def apply_boundary_conditions(velocity: Grid, domain: Domain, obstacles: tuple or list):
     """
     Enforces velocities boundary conditions on a velocity grid.
     Cells inside obstacles will get their velocity from the obstacle movement.
@@ -81,8 +85,8 @@ def apply_boundary_conditions(velocity: Grid, domain : Domain, obstacles: tuple 
     """
     # Mask hard boundaries and obstacle
     bcs = field.stagger(domain.scalar_grid(1, domain.boundaries['accessible_extrapolation']), math.minimum, domain.boundaries['accessible_extrapolation'], type=type(velocity))
-    bcs *= 1 - (HardGeometryMask(union([obstacle.geometry for obstacle in obstacles])) >> bcs )
-    velocity *= bcs
+    bcs *= 1 - (HardGeometryMask(union([obstacle.geometry for obstacle in obstacles])) >> bcs)
+    velocity *=  bcs
     # Add obstacle velocity to fluid
     for obstacle in obstacles:
         if not obstacle.is_stationary:
@@ -91,5 +95,3 @@ def apply_boundary_conditions(velocity: Grid, domain : Domain, obstacles: tuple 
             obs_vel = angular_velocity + obstacle.velocity
             velocity = (1 - obs_mask) * velocity + obs_mask * obs_vel
     return velocity
-
-
