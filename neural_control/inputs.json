@@ -1,23 +1,26 @@
 {
     "sim_load_path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/inlet_only_120x60/",
-    "sim_export_path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/unsupervised_tranlsation/",
-    "supervised_datapath": "/home/ramos/work/PhiFlow2/PhiFlow/storage/supervised_dataset/",
-    "nn_model_path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/unsupervised_tranlsation/",
+    "sim_export_path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/inlet_only_120x60_2/",
+    "supervised_datapath": "/home/ramos/work/PhiFlow2/PhiFlow/storage/translation/supervised/supervised_dataset/",
+    "nn_model_path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/unsupervised_translation_only/",
+    "translation_only": true,
     "domain_size": [
         120,
         60
     ],
     "obs_width": 20,
     "obs_height": 5,
+    "test_help_i": 5,
     "obs_xy": [
         35,
         30
     ],
+    "resume_training": true,
     "obs_density": 1.5,
     "inflow_velocity": 3.0,
     "dt": 0.1,
     "n_steps": 1000,
-    "n_cases": 30,
+    "n_cases": 200,
     "export_stride": 10,
     "probes_n_rows": 2,
     "probes_n_columns": 3,
@@ -26,19 +29,20 @@
     "isNewModel": true,
     "n_outputs": 2,
     "learning_rate_supervised": 0.004,
-    "learning_rate_unsupervised": 0.00050,
+    "learning_rate_unsupervised": 0.000500,
+    "learning_rate_decay_half_life": 50,
     "n_layers": 3,
-    "past_window": 2,
+    "past_window": 3,
     "tvt_ratio": [
         0.8,
         0.2,
         0.0
     ],
-    "n_epochs": 501,
+    "n_epochs": 251,
     "dataloader_params": {
         "batch_size": 50,
         "shuffle": true,
-        "num_workers": 2
+        "num_workers": 1
     },
     "max_acc": 0.25,
     "max_ang_acc": 0.025,
@@ -63,8 +67,8 @@
         "reference_x",
         "reference_y",
         "loss",
-        "loss_vel",
-        "loss_pos",
+        "loss_velocity",
+        "loss_spatial",
         "error_x",
         "error_y",
         "error_ang",

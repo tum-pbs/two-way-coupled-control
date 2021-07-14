@@ -10,6 +10,7 @@ import os
 from natsort import natsorted
 from itertools import chain
 from Plotter import Plotter
+from torch.nn.functional import pad
 
 
 class Interactive_Data_Reader(Tk):
@@ -28,7 +29,6 @@ class Interactive_Data_Reader(Tk):
         self.nMaxLoadedVariables = 30
         self.minsize(500, 400)
         self.geometry(window_size)
-        self.canvas = {}
         # String vars
         self.sModel = StringVar(self, " ")
         self.dataPath = StringVar(self, "/home/ramos/work/PhiFlow2/PhiFlow/storage/")
@@ -118,25 +118,30 @@ class Interactive_Data_Reader(Tk):
 
         """
         # Canva for input stuff
-        self.canvas["interaction"] = Canvas(self, width=300, height=500)
-        self.canvas["interaction"].config(highlightbackground="black")
-        self.canvas["interaction"].pack(side=LEFT, expand=True)
+        clicks = Canvas(self, width=300, height=500)
+        # clicks.config(highlightbackground="black")
+        clicks.pack(side=LEFT, expand=True, padx=30, pady=30)
+        slides = Canvas(self, width=300, height=500)
+        slides.pack(side=BOTTOM, expand=True)
         # Entry for datapath
-        self.eEntry = Entry(self.canvas["interaction"], textvariable=self.dataPath, width=50)
-        self.canvas["interaction"].create_window(200, 200, window=self.eEntry)
-        self.eEntry.grid(columnspan=3, row=0)
+        self.eEntry = Entry(clicks, textvariable=self.dataPath, width=100)
+        clicks.create_window(200, 200, window=self.eEntry)
+        self.eEntry.grid(columnspan=5, row=0)
         # Button for updating filepaths
-        self.bUpdatePaths = Button(self.canvas["interaction"], text="Update paths")
+        self.bUpdatePaths = Button(clicks, text="Update paths")
         self.bUpdatePaths.grid(row=2, column=0)
         # Button for updating matplotlib plot
-        self.bUpdatePlot = Button(self.canvas["interaction"], text="Update plot")
+        self.bUpdatePlot = Button(clicks, text="Update plot")
         self.bUpdatePlot.config(bg="#cf5f5f")
         self.bUpdatePlot.grid(row=2, column=1)
         # Button for updating/reloading matplotlib plot
-        self.bReloadVariables = Button(self.canvas["interaction"], text="Reload plots")
-        self.bReloadVariables.grid(row=2, column=2)
+        self.bReloadVariables = Button(clicks, text="Reload plots")
+        self.bReloadVariables.grid(row=2, column=3)
+        # Button for updating/reloading matplotlib plot
+        self.bToggleRefresh = Button(clicks, text="Refresh all")
+        self.bToggleRefresh.grid(row=2, column=2)
         # Simulation selector
-        self.oModelSelector = OptionMenu(self.canvas["interaction"], self.sModel, " ")
+        self.oModelSelector = OptionMenu(clicks, self.sModel, " ")
         self.oModelSelector.config(width=20)
         self.oModelSelector.grid(column=0, row=4)
         # Overal widgets that are present in more than one line
@@ -147,48 +152,66 @@ class Interactive_Data_Reader(Tk):
         self.oPlotType = []
         self.bRefresh = []
         for i in range(self.nMaxLoadedVariables):
-            self.oVarSelector += [OptionMenu(self.canvas["interaction"], self.sVar[i], " ")]
+            self.oVarSelector += [OptionMenu(clicks, self.sVar[i], " ")]
             self.oVarSelector[i].config(width=20)
             self.oVarSelector[i].grid(column=1, row=4 + i)
             self.iUpdatePlot += [IntVar()]
             self.iUpdatePlot[i].set(1)
-            checkButton = Checkbutton(self.canvas["interaction"], variable=self.iUpdatePlot[i])
+            checkButton = Checkbutton(clicks, variable=self.iUpdatePlot[i])
             checkButton.grid(column=2, row=i + 4)
-            self.bRefresh += [Button(self.canvas['interaction'], text='Refresh')]
-            self.oAxisSelector += [OptionMenu(self.canvas["interaction"], self.sAxis[i], *[str(x) for x in range(self.nAxis)])]
+            self.bRefresh += [Button(clicks, text='Refresh')]
+            self.oAxisSelector += [OptionMenu(clicks, self.sAxis[i], *[str(x) for x in range(self.nAxis)])]
             self.oAxisSelector[i].grid(column=3, row=i + 4)
             self.bRefresh[i].grid(row=i + 4, column=4)
-            self.oPlotType += [OptionMenu(self.canvas["interaction"], self.sPlotType[i], *self.plot_options)]
+            self.oPlotType += [OptionMenu(clicks, self.sPlotType[i], *self.plot_options)]
             self.oPlotType[i].grid(row=i + 4, column=5, columnspan=1)
-            self.eKwargs += [Entry(self.canvas["interaction"], textvariable=self.sKwargs[i], width=20)]
+            self.eKwargs += [Entry(clicks, textvariable=self.sKwargs[i], width=20)]
             self.eKwargs[i].grid(row=i + 4, column=6, columnspan=1)
         # Slider to choose simulation case
-        self.sCaseSelector = Scale(self.canvas["interaction"], orient=HORIZONTAL, label="Case Selector", length=400)
-        self.sCaseSelector.grid(row=i + 1 + 5, columnspan=3)
+        # label.place(x=20)
+        local_canvas1 = Canvas(slides)
+        self.sCaseSelector = Scale(local_canvas1, orient=HORIZONTAL, length=450)
+        self.bNextCase = Button(local_canvas1, text=">")
+        self.bPreviousCase = Button(local_canvas1, text="<")
+        self.bPreviousCase.pack(side=LEFT, )
+        self.sCaseSelector.pack(side=LEFT, )
+        self.bNextCase.pack(side=LEFT, )
         # Slider for different solutions
-        self.sSnapshotSelector = Scale(self.canvas["interaction"], orient=HORIZONTAL, length=400)
-        self.sSnapshotSelector.grid(row=i + 1 + 6, columnspan=3)
+        local_canvas2 = Canvas(slides)
+        self.sSnapshotSelector = Scale(local_canvas2, orient=HORIZONTAL, length=450)
+        self.bNextSnapshot = Button(local_canvas2, text=">")
+        self.bPreviousSnapshot = Button(local_canvas2, text="<")
+        self.bPreviousSnapshot.pack(side=LEFT, )
+        self.sSnapshotSelector.pack(side=LEFT, )
+        self.bNextSnapshot.pack(side=LEFT, )
+        label = Label(slides, text="Case ")
+        label.grid(row=0, column=0)
+        label = Label(slides, text="Snapshot ")
+        label.grid(row=0, column=1)
+        local_canvas1.grid(row=1, column=0, padx=30)
+        local_canvas2.grid(row=1, column=1, padx=30)
+        # Slider for different solutions
         # Button for playing animations
-        self.bPlay = Button(self.canvas["interaction"], text="Play")
+        self.bPlay = Button(clicks, text="Play")
         self.bPlay.grid(row=i + 1 + 7, column=0)
         # Button for stop playing animations
-        self.bStop = Button(self.canvas["interaction"], text="Stop")
+        self.bStop = Button(clicks, text="Stop")
         self.bStop.grid(row=i + 1 + 7, column=1)
         # Export check
         self.iExport = IntVar()
         self.iExport.set(0)
-        cExport = Checkbutton(self.canvas['interaction'], text="Export")
+        cExport = Checkbutton(clicks, text="Export")
         cExport.grid(row=i + 1 + 7, column=2)
         # Matplotlib stuff
         self.fig, self.axes = plt.subplots(int(self.nAxis / 2), int(2), figsize=(10, 10))
         self.axes = self.axes.reshape(-1)
         self.fig.tight_layout()
-        self.canvas["display"] = FigureCanvasTkAgg(self.fig, master=self)  # A tk.DrawingArea.
-        self.canvas["display"].draw()
-        self.toolbar = NavigationToolbar2Tk(self.canvas["display"], self, pack_toolbar=False)
+        self.display = FigureCanvasTkAgg(self.fig, master=self)  # A tk.DrawingArea.
+        self.display.draw()
+        self.toolbar = NavigationToolbar2Tk(self.display, self, pack_toolbar=False)
         self.toolbar.update()
         self.toolbar.pack(side=BOTTOM, fill=X)
-        self.canvas["display"].get_tk_widget().pack(side=RIGHT, expand=True)
+        self.display.get_tk_widget().pack(side=RIGHT, expand=True)
         # Hack so that I can use plotter class
         for i in range(self.nAxis):
             self.plotter.check_plot_id(f"plot{i}", constrained_layout=False)
@@ -203,8 +226,11 @@ class Interactive_Data_Reader(Tk):
         self.bUpdatePlot.bind("<Button-1>", self.toggle)
         self.bReloadVariables.bind("<Button-1>", self.reset_plot)
         self.sSnapshotSelector.configure(command=self.update_snapshot)
-        # self.sSnapshotSelector.bind("<Button-1>", self.update_snapshot)
+        self.bNextSnapshot.bind("<Button-1>", self.next_snapshot)
+        self.bPreviousSnapshot.bind("<Button-1>", self.previous_snapshot)
         self.sCaseSelector.bind("<ButtonRelease-1>", self.update_case)
+        self.bNextCase.bind("<Button-1>", self.next_case)
+        self.bPreviousCase.bind("<Button-1>", self.previous_case)
         self.sModel.trace("w", lambda *args: self.reset_plot())
         for i, (var, kwargs, axis, plotType, refresh) in enumerate(zip(self.sVar, self.sKwargs, self.sAxis, self.sPlotType, self.bRefresh)):
             var.trace("w", lambda *args, i=i: self.reset_plot(i=i))
@@ -214,6 +240,15 @@ class Interactive_Data_Reader(Tk):
             refresh.bind("<Button-1>", lambda *args, i=i: self.reset_plot(i=i))
         self.bPlay.configure(command=self.play)
         self.bStop.configure(command=self.stop)
+        self.bToggleRefresh.bind("<Button-1>", self.toggle_refresh)
+
+    def toggle_refresh(self, event=None):
+        """
+        Toggle all refreshs
+
+        """
+        for value in self.iUpdatePlot:
+            value.set(1)
 
     def stop(self, event=None):
         """
@@ -221,6 +256,42 @@ class Interactive_Data_Reader(Tk):
 
         """
         self.isPlaying = False
+
+    def next_snapshot(self, event=None):
+        """
+        Select next snapshot
+
+        """
+        i = self.sSnapshotSelector.get()
+        self.sSnapshotSelector.set(i + 1)
+        self.update_case()
+
+    def next_case(self, event=None):
+        """
+        Select next case
+
+        """
+        i = self.sCaseSelector.get()
+        self.sCaseSelector.set(i + 1)
+        self.update_case()
+
+    def previous_snapshot(self, event=None):
+        """
+        Select previous snapshot
+
+        """
+        i = self.sSnapshotSelector.get()
+        self.sSnapshotSelector.set(i - 1)
+        self.update_case()
+
+    def previous_case(self, event=None):
+        """
+        Select previous case
+
+        """
+        i = self.sCaseSelector.get()
+        self.sCaseSelector.set(i - 1)
+        self.update_case()
 
     def play(self, event=None):
         """ "
@@ -238,7 +309,7 @@ class Interactive_Data_Reader(Tk):
             self.update_snapshot.__wrapped__(self)
             current += 1
             if self.iExport:
-                path = f'{self.dataPath.get()}/frames/'
+                path = f'{self.dataPath.get()}/movies/'
                 if not os.path.exists(f'{path}'): os.mkdir(path)
                 self.fig.savefig(f'{path}{self.sSnapshotSelector.get()}.png', facecolor='w', edgecolor='w', dpi=200)
 
@@ -279,11 +350,15 @@ class Interactive_Data_Reader(Tk):
             if selector.get() == " ":
                 selector.set("0")
         # Update sliders
-        self.sCaseSelector.configure(to=int(cases[-1]))
-        self.sCaseSelector.configure(from_=int(cases[0]))
-        self.sSnapshotSelector.configure(to=snapshots[-1])
-        self.sSnapshotSelector.configure(from_=snapshots[0])
-        self.save_log()
+        try:
+            self.sCaseSelector.configure(to=int(cases[-1]))
+            self.sCaseSelector.configure(from_=int(cases[0]))
+            self.sSnapshotSelector.configure(to=snapshots[-1])
+            self.sSnapshotSelector.configure(from_=snapshots[0])
+            self.save_log()
+        except:
+            print("Could not get variables for slides correctly")
+            pass
         # self.refresh_plots()
 
     def toggle(self, event):
@@ -425,7 +500,7 @@ class Interactive_Data_Reader(Tk):
                 self.plotHandle[i][0].set_UVC(data_u, data_v)
                 new_xy = ((anchor_x[0, 0], anchor_y[0, 0]), (anchor_x[1, 0], anchor_y[1, 0]))
                 self.plotHandle[i][0].set_offsets(new_xy)
-        self.canvas["display"].draw()
+        self.display.draw()
         self.update()
 
     @ check_time
@@ -574,12 +649,12 @@ class Interactive_Data_Reader(Tk):
             except:
                 print(f"Error for plot: {plotType}, var {i}: {var} ")
                 self.iUpdatePlot[i].set(0)
-            self.canvas["display"].draw()
+            self.display.draw()
             self.update()
 
 
 if __name__ == '__main__':
     # TODO create test
-    log_path = "/home/ramos/work/PhiFlow2/PhiFlow/myscripts/visualization/"
+    log_path = "/home/ramos/work/PhiFlow2/PhiFlow/neural_control/visualization/"
     gui = Interactive_Data_Reader(log_path, "2600x1200")
     gui.mainloop()

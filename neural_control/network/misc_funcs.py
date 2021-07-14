@@ -22,12 +22,12 @@ def update_inputs(past_inputs: torch.Tensor, present_inputs: torch.Tensor, *cont
     """
     new_past_inputs = torch.cat((
         past_inputs[1:, :, :],
-        torch.cat((present_inputs.view(-1), torch.cat(control_effort))).view(1, 1, -1)),
+        torch.cat((present_inputs.view(-1), torch.cat(control_effort).view(-1))).view(1, 1, -1)),
         dim=0)
     return new_past_inputs
 
 
-def extract_inputs(sim: TwoWayCouplingSimulation, probes: Probes, x_objective: tuple, angle_objective: tuple, ref_vars: dict = None) -> Tuple[torch.Tensor, torch.Tensor]:
+def extract_inputs(sim: TwoWayCouplingSimulation, probes: Probes, x_objective: tuple, angle_objective: tuple, ref_vars: dict = None, translation_only: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Extract inputs that will be used on network model
 
@@ -37,38 +37,82 @@ def extract_inputs(sim: TwoWayCouplingSimulation, probes: Probes, x_objective: t
         x_objective : final destination in xy space
         angle_objective: angle that the box should go to
         ref_vars: reference variables for non dimensionalizing/normalizing inputs
+        translation_only: if true then inputs that are related with rotation will not be gathered
 
     Returns:
         model_inputs: tensor containing inputs for model
         loss_inputs: tensor containing inputs for loss
 
     """
+
     if not ref_vars: ref_vars = defaultdict(lambda: 1)
-    model_inputs = torch.cat(
-        [
-            sim.velocity.x.sample_at(probes.get_points_as_tensor()).native() / ref_vars['velocity'],
-            sim.velocity.y.sample_at(probes.get_points_as_tensor()).native() / ref_vars['velocity'],
-            sim.obstacle.velocity.native() / ref_vars['velocity'],
-            (x_objective - sim.obstacle.geometry.center).native() / ref_vars['length'],
-            sim.fluid_force.native() / ref_vars['force'],
-            # (angle_objective - sim.obstacle.geometry.angle).native().view(1) / ref_vars['angle'],
-            # math.sum(sim.fluid_torque).native().view(1) / ref_vars['torque'],
-        ])
-    loss_inputs = torch.cat(
-        ((x_objective - sim.obstacle.geometry.center).native() / ref_vars['length'],
-         sim.obstacle.velocity.native() / ref_vars['velocity'],
-         #  (angle_objective - sim.obstacle.geometry.angle).native().view(1) / ref_vars['angle'],
-         #  sim.obstacle.angular_velocity.native().view(1) / (ref_vars['angle'] / ref_vars['time'])
-         ))
-    return model_inputs.view(1, 1, -1), loss_inputs.view(1, -1)
+    # Gather inputs
+    probes_velocity = torch.stack([
+        sim.velocity.x.sample_at(probes.get_points_as_tensor()).native(),
+        sim.velocity.y.sample_at(probes.get_points_as_tensor()).native()
+    ])
+    error_xy = (x_objective - sim.obstacle.geometry.center).native()
+    fluid_force = sim.fluid_force.native()
+    obs_velocity = sim.obstacle.velocity.native()
+    error_angle = (angle_objective - sim.obstacle.geometry.angle).native().view(1)
+    fluid_torque = math.sum(sim.fluid_torque).native().view(1)
+    ang_velocity = sim.obstacle.angular_velocity.native().view(1)
+    # Transfer values to reference frame at box rotation
+    negative_angle = (sim.obstacle.geometry.angle - math.PI / 2.0).native()  # TODO Check this
+    # negative_angle = torch.tensor(0)
+    probes_velocity = rotate(probes_velocity, negative_angle)
+    error_xy = rotate(error_xy, negative_angle)
+    fluid_force = rotate(fluid_force, negative_angle)
+    obs_velocity = rotate(obs_velocity, negative_angle)
+
+    model_inputs = [
+        probes_velocity[0] / ref_vars['velocity'],
+        probes_velocity[1] / ref_vars['velocity'],
+        obs_velocity / ref_vars['velocity'],
+        error_xy / ref_vars['length'],
+        fluid_force / ref_vars['force'],
+    ]
+    loss_inputs = [
+        error_xy / ref_vars['length'],
+        obs_velocity / ref_vars['velocity'],
+    ]
+    if not translation_only:
+        model_inputs += [
+            error_angle / ref_vars['angle'],
+            fluid_torque / ref_vars['torque'],
+            ang_velocity / ref_vars['ang_velocity']
+        ]
+        loss_inputs += [
+            error_angle / ref_vars['angle'],
+            ang_velocity / ref_vars['ang_velocity']
+        ]
+    return torch.cat(model_inputs).view(1, 1, -1), torch.cat(loss_inputs).view(1, -1)
 
 
-def calculate_loss(loss_inputs: math.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+def rotate(xy: torch.Tensor, angle: float):
+    """
+    Rotate coordinates xy by angle
+
+    Params:
+        xy: list of coordinates with dimension [2,n].
+        angle: angle (radians) by which xy will be rotated
+
+    Returns:
+        rotated_cooridnates: xy rotated by angle with dimension [2,n]
+
+    """
+    matrix = torch.tensor([[torch.cos(angle), -torch.sin(angle)], [torch.sin(angle), torch.cos(angle)]]).cuda()
+    rotated_xy = torch.matmul(matrix, xy)
+    return rotated_xy  # TODO Check this
+
+
+def calculate_loss(loss_inputs: math.Tensor, translation_only: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Calculate loss
 
     Params:
         loss_inputs: inputs needed for calculating loss
+        translation_only: if True then additional terms won't be calculated
 
     Returns:
         loss: loss value
@@ -80,19 +124,32 @@ def calculate_loss(loss_inputs: math.Tensor) -> Tuple[torch.Tensor, torch.Tensor
     """
     x_error = loss_inputs[:, :, 0:2]
     obs_velocity = loss_inputs[:, :, 2:4]
-    # ang_error = loss_inputs[:, :, 4]
-    # angular_velocity = loss_inputs[:, :, 5]
-    # control_force = loss_inputs[:, :, 6:8]
-    # control_torque = loss_inputs[:, :, 8]
     spatial_term = 15 * torch.sum(x_error**2)
     # Velocity term and angle term are pronounced only when spatial error is low
     velocity_term = 1 * torch.sum(obs_velocity**2 / (x_error**2 * 0.5 + 1))
-    # ang_term = 10 * torch.sum(ang_error**2 / (torch.sum(x_error**2) * 0.5 + 1))
-    # Angular velocity term is only pronounced when angular error is low
-    # ang_vel_term = 2 * torch.sum(angular_velocity**2 / (ang_error**2 * 0.5 + 1))
-    loss = spatial_term + velocity_term  # + ang_term + ang_vel_term
-    # return loss, spatial_term, velocity_term, ang_term, ang_vel_term
-    return loss, spatial_term, velocity_term, 0, 0
+    if not translation_only:
+        ang_error = loss_inputs[:, :, 4]
+        angular_velocity = loss_inputs[:, :, 5]
+        delta_force = loss_inputs[:, :, 6:8]
+        delta_torque = loss_inputs[:, :, 8]
+        ang_term = 15 * torch.sum(ang_error**2 / (torch.sum(x_error**2) * 0.5 + 1))
+        # Angular velocity term is only pronounced when angular error is low
+        ang_vel_term = .2 * torch.sum(angular_velocity**2 / (ang_error**2 * 0.5 + 1))
+        # Avoid abrupt changes
+        force_term = 0.025 * torch.sum(delta_force**2)
+        torque_term = 0.025 * torch.sum(delta_torque**2)
+    else:
+        ang_term = ang_vel_term = force_term = torque_term = torch.tensor(0)
+    loss = spatial_term + velocity_term + ang_term + ang_vel_term + force_term + torque_term
+    loss_terms = dict(
+        spatial=spatial_term,
+        velocity=velocity_term,
+        ang=ang_term,
+        ang_vel=ang_vel_term,
+        force=force_term,
+        torque=torque_term
+    )
+    return loss, loss_terms
 
 
 def prepare_export_folder(path: str, initial_step: int):

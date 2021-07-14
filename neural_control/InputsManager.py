@@ -37,18 +37,25 @@ class InputsManager():
             2,  # Reference xy
             2,  # Fluid forces
             2,  # Control forces
-            # 1,  # Reference angle
-            # 1,  # Fluid torque
-            # 1,  # Control torque
         ))
         self.n_present_features = np.sum((
             (self.probes_n_rows * (self.probes_n_columns - 1)) * 2 * 4,  # Probes
             2,  # Obs velocity
             2,  # Reference xy
             2,  # Fluid forces
-            # 1,  # Reference angle
-            # 1,  # Fluid torque
         ))
+        if not self.translation_only:
+            self.n_past_features += np.sum((
+                1,  # Reference angle
+                1,  # Fluid torque
+                1,  # Control torque
+                1,  # Angular velocity
+            ))
+            self.n_present_features += np.sum((
+                1,  # Reference angle
+                1,  # Fluid torque
+                1,  # Angular velocity
+            ))
 
     def export(self, path: str):
         """
@@ -68,6 +75,6 @@ class InputsManager():
 
 if __name__ == '__main__':
     # Testing class
-    inputs = inputsManager('/home/ramos/work/PhiFlow2/PhiFlow/myscripts/')
+    inputs = InputsManager('/home/ramos/work/PhiFlow2/PhiFlow/myscripts/')
     inputs.export('/home/ramos/work/PhiFlow2/PhiFlow/myscripts/testing.json')
     print('Done')

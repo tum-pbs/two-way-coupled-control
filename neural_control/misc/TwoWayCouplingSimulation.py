@@ -22,8 +22,14 @@ class TwoWayCouplingSimulation:
 
     """
 
-    def __init__(self):
+    def __init__(self, translation_only: bool = False):
+        """
+        Class initializer. If translation_only is True, simulation won't have rotation
+
+        """
         self.ic = {}
+        self.translation_only = translation_only
+        self.additional_obs = []
 
     def set_initial_conditions(
         self,
@@ -107,7 +113,7 @@ class TwoWayCouplingSimulation:
         self.obs_inertia = obs_inertia
         self.fluid_force = math.tensor(torch.zeros(2).cuda())
         self.fluid_torque = math.tensor(torch.zeros(1).cuda())
-        self.solve_params = math.LinearSolve(absolute_tolerance=1e-3, max_iterations=5e3)
+        self.solve_params = math.LinearSolve(absolute_tolerance=1e-3, max_iterations=10e3)
         constant_velocity_bc_left = {
             "accessible_extrapolation": extrapolation.ConstantExtrapolation(1),
             "active_extrapolation": extrapolation.ConstantExtrapolation(0),
@@ -163,11 +169,22 @@ class TwoWayCouplingSimulation:
 
         """
         new_velocity, new_pressure, *_ = fluid.make_incompressible(
-            self.velocity, self.domain, (self.obstacle,),
+            self.velocity, self.domain, (self.obstacle, *self.additional_obs),
             solve_params=self.solve_params,
             pressure_guess=self.pressure)
         self.pressure = new_pressure
         self.velocity = new_velocity
+
+    def add_sphere(self, xy: torch.Tensor, radius: torch.Tensor):
+        """
+        Add an sphere to the simulation at xy with radius r
+
+        Params:
+            xy: location of sphere
+            radius: radius of sphere
+
+        """
+        self.additional_obs = (Obstacle(Sphere(xy, radius)),)
 
     def export_data(self, path: str, case: int, step: int, ids: tuple = None, delete_previous=True):
         """
@@ -263,8 +280,7 @@ class TwoWayCouplingSimulation:
         # Integrate accelerations
         new_velocity = self.obstacle.velocity + acc * self.dt
         new_ang_velocity = self.obstacle.angular_velocity + angular_acc * self.dt
-        # self.obstacle = self.obstacle.copied_with(velocity=new_velocity, )
-        self.obstacle = self.obstacle.copied_with(velocity=new_velocity, angular_velocity=new_ang_velocity.vector[0] * 0)  # Translation only
+        self.obstacle = self.obstacle.copied_with(velocity=new_velocity, angular_velocity=new_ang_velocity.vector[0] * (not self.translation_only))
 
     def calculate_fluid_forces(self):
         """

@@ -27,7 +27,7 @@ class Generator(TwoWayCouplingSimulation):
         super().__init__()
         self.n_vel_spline_knots = []
         self.initial_world = []
-        self.plotter = plotter.Plotter(
+        self.plotter = Plotter(
             imshow_kwargs={"origin": "lower", "cmap": "seismic", "vmin": -1, "vmax": 1, "interpolation": "None"},
             plot_kwargs={"linestyle": "--", "alpha": 0.5, "linewidth": 3})
 
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         "error_x",
         "error_y"
     )
-    inp = inputsManager("/home/ramos/work/PhiFlow2/PhiFlow/myscripts/inputs.json")
+    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json")
     inp.calculate_properties()
     generator = Generator()
     generator.set_initial_conditions(inp.obs_width, inp.obs_height, inp.sim_load_path)

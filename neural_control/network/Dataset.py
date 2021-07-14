@@ -1,3 +1,4 @@
+from collections import defaultdict
 import torch
 import os
 import numpy as np
@@ -6,7 +7,7 @@ import numpy as np
 class Dataset(torch.utils.data.Dataset):
     'Characterizes a dataset for PyTorch'
 
-    def __init__(self, path: str, tvt_ratio: tuple):
+    def __init__(self, path: str, tvt_ratio: tuple, ref_vars=None):
         """
         Initialize ids and labels
 
@@ -29,6 +30,27 @@ class Dataset(torch.utils.data.Dataset):
             'control_force_x',
             'control_force_y']
         self.tvt_ratio = tvt_ratio
+        if ref_vars:
+            self.ref_vars = ref_vars
+            self.ref_vars_hash = dict(
+                probes_vx='velocity',
+                probes_vy='velocity',
+                obs_vx='velocity',
+                obs_vy='velocity',
+                error_x='length',
+                error_y='length',
+                fluid_force_x='force',
+                fluid_force_y='force',
+                control_force_x='force',
+                control_force_y='force'
+            )
+            # Make sure hash values are on ref_vars keys
+            hash_values = self.ref_vars_hash.values()
+            vars = list(self.ref_vars.keys())
+            assert not any([value not in vars for value in hash_values])
+        else:
+            self.ref_vars = defaultdict(lambda: 1)
+            self.ref_vars_hash = defaultdict(lambda: 1)
         self.map_cases()
         self.update()
 
@@ -39,37 +61,52 @@ class Dataset(torch.utils.data.Dataset):
         """
         return len(self.cases) * len(self.snapshots)
 
-    def __getitem__(self, index):
+    def __getitem__(self, index, return_var_indexes: bool = False):
         """
         Generates one sample of data
 
-        param: index: index of file that will be loaded
+        Params:
+            index: index of file that will be loaded
+            return_var_indexes: if True a dict with the indexes of variables is returned
 
         """
         case = self.cases[int(index / self.n_snapshots)]
         snapshot = self.snapshots[index % self.n_snapshots]
+        var_indexes = defaultdict(list)
+        i = 0
         # Past inputs
         x_past = ()  # dim = (past_window, features)
         for j in reversed(range(self.past_window)):
             for var in self.vars:
                 file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot-(j+1):04d}.npy'
                 data = np.load(file).reshape(-1,)
+                factor = self.ref_vars[self.ref_vars_hash[var]]
+                data /= factor
                 x_past += (*data,)
+                var_indexes[var] += [torch.arange(i, data.size + i, dtype=torch.long).view(-1)]
+                i += data.size
+        x_past = torch.tensor(x_past, dtype=torch.float32)
         # Present inputs
         x_present = ()
         for var in self.vars[:-2]:
             file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy'
             data = np.load(file).reshape(-1,)
+            factor = self.ref_vars[self.ref_vars_hash[var]]
+            data /= factor
             x_present += (*data,)
-        x = torch.tensor(x_past + x_present, dtype=torch.float32)
+        x_present = torch.tensor(x_present, dtype=torch.float32)
+        # x = torch.tensor(x_past + x_present, dtype=torch.float32)
         # Labels
         y = ()
-        for i, var in enumerate(self.vars[-2:]):
+        for var in self.vars[-2:]:
             file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy'
             data = np.load(file).reshape(-1)
+            factor = self.ref_vars[self.ref_vars_hash[var]]
+            data /= factor
             y += (*data,)
         y = torch.tensor(y, dtype=torch.float32)
-        return x, y
+        if return_var_indexes: return x_present, x_past, y, var_indexes
+        else: return x_present, x_past, y
 
     def map_cases(self):
         """
@@ -126,6 +163,56 @@ class Dataset(torch.utils.data.Dataset):
         # Snapshots
         self.snapshots = self.all_snapshots[self.past_window:]
         self.n_snapshots = len(self.snapshots)
+
+    def get_values_by_case_snapshot(self, case: int, snapshots: list = None):
+        """
+        Get all labels and inputs by case
+
+        Params:
+            case: labels and inputs from this case will be returned
+            snapshost: snapshots that will be loaded. If none then all snapshots from case will be loaded
+
+        Returns:
+            inputs: inputs for model
+            labels: labels from case
+
+        """
+        labels_ = []
+        inputs_past_ = []
+        inputs_present_ = []
+        assert isinstance(snapshots, list)
+        if not snapshots: snapshots = range(self.n_snapshots)
+        for i in snapshots:
+            data = self.__getitem__(i + case * self.n_snapshots, True)
+            inputs_present_ += [data[0]]
+            inputs_past_ += [data[1]]
+            labels_ += [data[2]]
+        indexes = data[3]
+        # Convert to tensor
+        inputs_present = inputs_present_[0].view(1, -1)
+        inputs_past = inputs_past_[0].view(1, -1)
+        labels = labels_[0].view(1, -1)
+        for input_present, input_past, label in zip(inputs_present_[1:], inputs_past_[1:], labels_[1:]):
+            inputs_present = torch.cat((input_present, input_present.view(1, -1)))
+            inputs_past = torch.cat((input_past, input_past.view(1, -1)))
+            labels = torch.cat((labels, label.view(1, -1)))
+        return inputs_present.cuda(), inputs_past.cuda(), labels.cuda(), indexes
+
+    def get_destination(self, case: int):
+        """
+        Get destination of case
+
+        Params:
+            case: destination of this case will be returned
+
+        Returns:
+            destination: destination of case case
+
+        """
+        file_x = f'{self.path}/reference_x/reference_x_case{case:04d}_0000.npy'
+        file_y = f'{self.path}/reference_y/reference_y_case{case:04d}_0000.npy'
+        destination = (np.load(file_x), np.load(file_y))
+        return destination
 
 
 if __name__ == '__main__':
