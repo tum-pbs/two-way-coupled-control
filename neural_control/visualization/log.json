@@ -1,6 +1,6 @@
 {
-    "dataPath": "/home/ramos/felix/PhiFlow/neural_obstacle_control/simulation_data",
-    "sModel": "test",
+    "dataPath": "/home/ramos/work/PhiFlow2/PhiFlow/storage/rotation_and_translation/",
+    "sModel": "dummy",
     "sVar": [
         "obs_mask",
         "vx",
@@ -31,7 +31,7 @@
         "obs_xy",
         "obs_xy",
         "fluid_torque",
-        " "
+        "obs_xy"
     ],
     "sAxis": [
         "0",
@@ -98,7 +98,7 @@
         " "
     ],
     "sKwargs": [
-        "cmap='Greys', alpha=1, transpose=True, origin='lower'",
+        "cmap='Greys', transpose=True, origin='lower'",
         "cmap='viridis', transpose=True, origin='lower', alpha=0.8",
         "create_legend=False, color='black'",
         "",
@@ -124,8 +124,8 @@
         " ",
         " ",
         " ",
-        "angle='obs_ang', torque='control_torque', offset=8, scale=100, linestyle='dotted', facecolor='none', linewidth=1.5, width=0.0001, headwidth=0, headlength=0, edgecolor='tab:red'",
-        "angle='obs_ang', torque='fluid_torque', offset=8, scale=1, color='y' , linestyle='dotted', facecolor='none', linewidth=1.5, width=0.0001, headwidth=0, headlength=0, edgecolor='y'",
+        "angle='obs_ang', torque='control_torque', offset=8, scale=200, linestyle='dotted', facecolor='none', linewidth=1.5, width=0.0001, headwidth=0, headlength=0, edgecolor='tab:red'",
+        "angle='obs_ang', torque='fluid_torque', offset=8, scale=200, color='y' , linestyle='dotted', facecolor='none', linewidth=1.5, width=0.0001, headwidth=0, headlength=0, edgecolor='y'",
         " ",
         " "
     ]

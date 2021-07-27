@@ -31,6 +31,7 @@ class Interactive_Data_Reader(Tk):
         self.geometry(window_size)
         # String vars
         self.sModel = StringVar(self, " ")
+        self.sTest = StringVar(self, " ")
         self.dataPath = StringVar(self, "/home/ramos/work/PhiFlow2/PhiFlow/storage/")
         self.sVar = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
         self.sKwargs = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
@@ -143,7 +144,16 @@ class Interactive_Data_Reader(Tk):
         # Simulation selector
         self.oModelSelector = OptionMenu(clicks, self.sModel, " ")
         self.oModelSelector.config(width=20)
-        self.oModelSelector.grid(column=0, row=4)
+        self.oModelSelector.grid(column=0, row=3)
+        # Test selector
+        self.oTestSelector = OptionMenu(clicks, self.sTest, " ")
+        self.oTestSelector.config(width=20)
+        self.oTestSelector.grid(column=1, row=3)
+        # Checkbutton for test data
+        self.iUseTestData = IntVar()
+        self.iUseTestData.set(0)
+        checkButton = Checkbutton(clicks, variable=self.iUseTestData, text="Test Data")
+        checkButton.grid(column=2, row=3)
         # Overal widgets that are present in more than one line
         self.oVarSelector = []
         self.eKwargs = []
@@ -197,11 +207,14 @@ class Interactive_Data_Reader(Tk):
         # Button for stop playing animations
         self.bStop = Button(clicks, text="Stop")
         self.bStop.grid(row=i + 1 + 7, column=1)
+        # Button for skipping snapshots when playing
+        self.ePlaySkip = Entry(clicks, text="Skip")
+        self.ePlaySkip.grid(row=i + 1 + 7, column=2)
         # Export check
         self.iExport = IntVar()
         self.iExport.set(0)
         cExport = Checkbutton(clicks, text="Export")
-        cExport.grid(row=i + 1 + 7, column=2)
+        cExport.grid(row=i + 1 + 7, column=3)
         # Matplotlib stuff
         self.fig, self.axes = plt.subplots(int(self.nAxis / 2), int(2), figsize=(10, 10))
         self.axes = self.axes.reshape(-1)
@@ -301,13 +314,12 @@ class Interactive_Data_Reader(Tk):
         self.isPlaying = True
         maximum = self.sSnapshotSelector.cget("to")
         current = int(self.sSnapshotSelector.get())
-        if current == maximum:
+        if current >= maximum:
             current = self.sSnapshotSelector.cget("from")
         while current <= maximum and self.isPlaying:
-            # now = time.time()
             self.sSnapshotSelector.set(current)
             self.update_snapshot.__wrapped__(self)
-            current += 1
+            current += int(self.ePlaySkip.get())
             if self.iExport:
                 path = f'{self.dataPath.get()}/movies/'
                 if not os.path.exists(f'{path}'): os.mkdir(path)
@@ -333,15 +345,26 @@ class Interactive_Data_Reader(Tk):
         update_dropdown(self.oModelSelector, self.sModel, models)
         if self.sModel.get() not in models:
             self.sModel.set(models[0])
-        # Update variable
-        variables = os.listdir(path + "/" + self.sModel.get() + "/data/")
+        # Tests
+        if os.path.exists(f"{path}/{self.sModel.get()}/tests/"):
+            tests = os.listdir(f"{path}/{self.sModel.get()}/tests/")
+        else: tests = ['']
+        update_dropdown(self.oTestSelector, self.sTest, tests)
+        if self.sTest.get() not in tests:
+            self.sTest.set(tests[0])
+        # Data folder
+        if self.iUseTestData.get():
+            self.datafolder = f"/tests/{self.sTest.get()}/data/"
+        else:
+            self.datafolder = "/data/"
+        variables = os.listdir(path + "/" + self.sModel.get() + self.datafolder)
         variables = natsorted(list(set([file.split("_case")[0] for file in variables])))
         for var, oVarSelector, checkBox in zip(self.sVar, self.oVarSelector, self.iUpdatePlot):
             if var.get() not in variables:
                 checkBox.set(0)
             update_dropdown(oVarSelector, var, variables)
         # Update cases selector dropdown
-        allCases = os.listdir(path + "/" + self.sModel.get() + "/data/" + variables[0])
+        allCases = os.listdir(path + "/" + self.sModel.get() + self.datafolder + variables[0])
         cases = natsorted(list(set([file.split("case")[1][:4] for file in allCases])))
         snapshots = natsorted([int(case.split("_")[-1][: 4]) for case in natsorted(allCases)
                                if f"{variables[0]}_case{self.sCaseSelector.get():04d}" in case])
@@ -436,8 +459,9 @@ class Interactive_Data_Reader(Tk):
                 continue
             var = self.sVar[i].get()
             case = self.sCaseSelector.get()
+            filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
+            if not os.path.exists(filepath): continue  # Make sure file exists
             plotType = self.sPlotType[i].get()
-            filepath = f"{path}/{model}/data/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
             for string in strings:
@@ -462,7 +486,7 @@ class Interactive_Data_Reader(Tk):
                 if not (vars_set <= kwargs.keys()):
                     continue
                 x = np.load(filepath)
-                y = np.load(f"{path}/{model}/data/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:04d}.npy")
+                y = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:04d}.npy")
                 data = [x, y][::1 - 2 * (kwargs['x'] == False)]  # check if order should be inverted
                 kwargs.pop('x', None)
                 kwargs.pop('y', None)
@@ -475,8 +499,8 @@ class Interactive_Data_Reader(Tk):
                 if not (vars_set <= kwargs.keys()):
                     continue
                 data_xy = np.load(filepath)
-                data_u = np.load(f"{path}/{model}/data/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:04d}.npy")
-                data_v = np.load(f"{path}/{model}/data/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:04d}.npy")
+                data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:04d}.npy")
+                data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:04d}.npy")
                 self.plotHandle[i][0].set_UVC(data_u, data_v)
                 self.plotHandle[i][0].set_offsets(data_xy)
             # Torque
@@ -485,8 +509,8 @@ class Interactive_Data_Reader(Tk):
                 if not (vars_set <= kwargs.keys()):
                     continue
                 data_xy = np.load(filepath)
-                angle = np.load(f"{path}/{model}/data/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:04d}.npy") - 3.14159 / 2
-                torque = np.load(f"{path}/{model}/data/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:04d}.npy")
+                angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:04d}.npy")
+                torque = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:04d}.npy")
                 offset = kwargs['offset']
                 anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
                 anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])
@@ -518,7 +542,8 @@ class Interactive_Data_Reader(Tk):
             var = self.sVar[i].get()
             case = self.sCaseSelector.get()
             plotType = self.sPlotType[i].get()
-            filepath = f"{path}/{model}/data/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
+            filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
+            if not os.path.exists(filepath): continue  # Make sure file exists
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
             for string in strings:
@@ -530,7 +555,7 @@ class Interactive_Data_Reader(Tk):
                 snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
                 data = np.ones((2, int(snapshots[-1] - snapshots[0] + 1))) * snapshots
                 for j, snapshot_local in enumerate(snapshots):
-                    filepath = f"{path}/{model}/data/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy"
+                    filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy"
                     loaded_data = np.load(filepath)
                     data[2 - loaded_data.size:, j] = loaded_data
                 self.plotHandle[i][0].set_data(data)
@@ -559,7 +584,7 @@ class Interactive_Data_Reader(Tk):
             case = self.sCaseSelector.get()
             axis = self.sAxis[i].get()
             plotType = self.sPlotType[i].get()
-            filepath = f"{path}/{model}/data/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
+            filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
             try:
@@ -591,7 +616,7 @@ class Interactive_Data_Reader(Tk):
                     snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
                     data = np.ones((2, int(snapshots[-1] - snapshots[0] + 1))) * snapshots
                     for j, snapshot_local in enumerate(snapshots):
-                        filepath = f"{path}/{model}/data/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy"
+                        filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy"
                         loaded_data = np.load(filepath)
                         data[2 - loaded_data.size:, j] = loaded_data
                     self.plotter.add_data([data], [var])
@@ -603,7 +628,7 @@ class Interactive_Data_Reader(Tk):
                     if not (vars_set <= kwargs.keys()):
                         continue
                     x = np.load(filepath)
-                    y = np.load(f"{path}/{model}/data/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:04d}.npy")
+                    y = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:04d}.npy")
                     data = [[x], [y]][::1 - 2 * (kwargs['x'] == False)]  # check if order should be inverted
                     kwargs.pop('x', None)
                     kwargs.pop('y', None)
@@ -622,8 +647,8 @@ class Interactive_Data_Reader(Tk):
                     if not (vars_set <= kwargs.keys()):
                         continue
                     data_xy = np.load(filepath)
-                    data_u = np.load(f"{path}/{model}/data/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:04d}.npy")
-                    data_v = np.load(f"{path}/{model}/data/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:04d}.npy")
+                    data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:04d}.npy")
+                    data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:04d}.npy")
                     kwargs.pop('u', None)
                     kwargs.pop('v', None)
                     self.plotHandle[i] = [self.axes[int(axis)].quiver(*data_xy, data_u, data_v, **kwargs)]
@@ -633,8 +658,8 @@ class Interactive_Data_Reader(Tk):
                     if not (vars_set <= kwargs.keys()):
                         continue
                     data_xy = np.load(filepath)
-                    angle = np.load(f"{path}/{model}/data/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:04d}.npy") - 3.14159 / 2
-                    torque = np.load(f"{path}/{model}/data/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:04d}.npy")
+                    angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:04d}.npy")
+                    torque = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:04d}.npy")
                     offset = kwargs['offset']
                     anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
                     anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])

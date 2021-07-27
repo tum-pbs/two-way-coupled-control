@@ -1,12 +1,10 @@
+from collections import defaultdict
 from phi.torch.flow import *
-import sys
-import gc
 import os
 from natsort import natsorted
 import shutil
 import copy
 from phi.field import spatial_gradient
-TORCH_BACKEND.set_default_device("GPU")
 
 
 class TwoWayCouplingSimulation:
@@ -22,24 +20,34 @@ class TwoWayCouplingSimulation:
 
     """
 
-    def __init__(self, translation_only: bool = False):
+    def __init__(self, device: str, translation_only: bool = False):
         """
         Class initializer. If translation_only is True, simulation won't have rotation
+
+        Params:
+            device: GPU or CPU
+            translation_only: if True then obstacle will not rotate
 
         """
         self.ic = {}
         self.translation_only = translation_only
         self.additional_obs = []
+        if device == "GPU":
+            TORCH_BACKEND.set_default_device("GPU")
+            self.device = torch.device("cuda:0")
+        else:
+            TORCH_BACKEND.set_default_device("CPU")
+            self.device = torch.device("cpu")
 
     def set_initial_conditions(
         self,
         obs_w: float,
         obs_h: float,
         path: str = None,
-        obs_xy: math.Tensor = None,
-        obs_ang: math.Tensor = math.tensor((PI / 2,), convert=True),
-        obs_vel: math.Tensor = math.tensor([0, 0]),
-        obs_ang_vel: math.Tensor = math.tensor((0.0,), convert=True),
+        obs_xy: list = None,
+        obs_ang: float = PI / 2,
+        obs_vel: list = [0, 0],
+        obs_ang_vel: float = 0,
     ):
         """
         Set the initial conditions of simulation. If a path is given then the initial conditions will be loaded from
@@ -69,7 +77,7 @@ class TwoWayCouplingSimulation:
             files = natsorted([file for file in os.listdir(
                 f"{path}/data/{files[0]}/") if ".npy" in file])
             case_snapshot = "_".join(files[-1].split("_")[-2:])
-            for variable in [
+            for var in [
                 "pressure",
                 "vx",
                 "vy",
@@ -79,14 +87,24 @@ class TwoWayCouplingSimulation:
                 "obs_ang",
                 "obs_ang_vel",
             ]:
-                self.ic[variable] = np.load(
-                    f"{path}/data/{variable}/{variable}_{case_snapshot}")
-                if variable in ["vx", "vy"]:
-                    self.ic[variable] = math.tensor(
-                        self.ic[variable], ("x", "y"))
-            i0 = int(case_snapshot.split('_')[0][4:])
+                self.ic[var] = np.load(
+                    f"{path}/data/{var}/{var}_{case_snapshot}")
+                if var in ["vx", "vy"]:
+                    self.ic[var] = math.tensor(
+                        self.ic[var], ("x", "y"))
+                if var == 'obs_ang': self.ic[var] += PI / 2  # Account for difference in angle convention
+            # Try to load a second obstacle
+            try:
+                self.ic['obs2_xy'] = np.load(f"{path}/data/obs2_xy/obs2_xy_case0000_0000.npy")
+            except:
+                print("Did not found data of second obstacle")
+                pass
+            i0 = int(case_snapshot.split('_')[1][:4])
             return i0
         else:
+            obs_vel = math.tensor(obs_vel)
+            obs_ang = math.tensor((obs_ang,), convert=True)
+            obs_ang_vel = math.tensor((obs_ang_vel,), convert=True)
             self.ic["pressure"] = 0
             self.ic["vx"] = self.ic["vy"] = math.tensor(0)
             self.ic["obs_xy"] = obs_xy
@@ -111,8 +129,8 @@ class TwoWayCouplingSimulation:
         self.dt = dt
         self.obs_mass = obs_mass
         self.obs_inertia = obs_inertia
-        self.fluid_force = math.tensor(torch.zeros(2).cuda())
-        self.fluid_torque = math.tensor(torch.zeros(1).cuda())
+        self.fluid_force = math.tensor(torch.zeros(2).to(self.device))
+        self.fluid_torque = math.tensor(torch.zeros(1).to(self.device))
         self.solve_params = math.LinearSolve(absolute_tolerance=1e-3, max_iterations=10e3)
         constant_velocity_bc_left = {
             "accessible_extrapolation": extrapolation.ConstantExtrapolation(1),
@@ -148,6 +166,9 @@ class TwoWayCouplingSimulation:
             velocity=math.tensor((self.ic["obs_vx"], self.ic["obs_vy"])),
             angular_velocity=math.tensor(self.ic["obs_ang_vel"][0], convert=True),
         )
+        # Add additional obstacle if it was provided
+        if "obs2_xy" in self.ic.keys():
+            self.add_box(self.ic["obs2_xy"], self.ic["obs_w"], self.ic["obs_w"])
         # Constant velocity
         self.inflow_velocity_mask = HardGeometryMask(Box[:0.5, :]) >> self.velocity
         self.inflow_velocity = inflow_velocity
@@ -184,7 +205,22 @@ class TwoWayCouplingSimulation:
             radius: radius of sphere
 
         """
-        self.additional_obs = (Obstacle(Sphere(xy, radius)),)
+        self.additional_obs = (Obstacle(Sphere(torch.as_tensor(xy), torch.as_tensor(radius))),)
+
+    def add_box(self, xy: torch.Tensor, width: torch.Tensor, height: torch.Tensor):
+        """
+        Add a box to the simulation at xy with width and height
+
+        Params:
+            xy: location of box
+            width: width of box
+            height: height of box
+
+        """
+        box_coordinates = [slice(xy[0] - width / 2, xy[0] + width / 2,),
+                           slice(xy[1] - height / 2, xy[1] + height / 2,), ]
+        geometry = Box[box_coordinates].shifted(torch.tensor(0).to(self.device))  # Trick to make sure this is treated as a tensor
+        self.additional_obs = (Obstacle(geometry),)
 
     def export_data(self, path: str, case: int, step: int, ids: tuple = None, delete_previous=True):
         """
@@ -198,62 +234,29 @@ class TwoWayCouplingSimulation:
             delete_previous: if True all files on folder will be deleted
 
         """
-        if not ids:
-            ids = (
-                "pressure",
-                "vx",
-                "vy",
-                "obs_mask",
-                "obs_xy",
-                "obs_vx",
-                "obs_vy",
-                "obs_ang",
-                "obs_ang_vel",
-                "fluid_force_x",
-                "fluid_force_y",
-                "fluid_torque_x",
-                "fluid_torque_y",
-            )
-        if not os.path.exists((path)):
-            os.mkdir(path)
-        if delete_previous:
-            shutil.rmtree(f"{path}/data/", ignore_errors=True)
-        if not os.path.exists(f"{path}/data/"):
-            os.mkdir(f"{path}/data/")
+        export_funcs = dict(
+            pressure=lambda: self.pressure.values.native().detach().cpu().numpy(),
+            vx=lambda: self.velocity.x.data.native().detach().cpu().numpy(),
+            vy=lambda: self.velocity.y.data.native().detach().cpu().numpy(),
+            obs_xy=lambda: self.obstacle.geometry.center.native().detach().cpu().numpy(),
+            obs_vx=lambda: self.obstacle.velocity.native().detach().cpu().numpy()[0],
+            obs_vy=lambda: self.obstacle.velocity.native().detach().cpu().numpy()[1],
+            obs_ang=lambda: self.obstacle.geometry.angle.native().view(1).detach().cpu().numpy() - PI / 2,
+            obs_ang_vel=lambda: self.obstacle.angular_velocity.native().view(1).detach().cpu().numpy(),
+            obs_mask=lambda: (HardGeometryMask(self.obstacle.geometry) >> self.pressure).data.native().detach().cpu().numpy(),
+            fluid_force_x=lambda: self.fluid_force.native().detach().cpu().numpy()[0],
+            fluid_force_y=lambda: self.fluid_force.native().detach().cpu().numpy()[1],
+            fluid_torque_x=lambda: self.fluid_torque.native().detach().cpu().numpy()[0],
+            fluid_torque_y=lambda: self.fluid_torque.native().detach().cpu().numpy()[1],
+            fluid_torque=lambda: math.sum(self.fluid_torque).native().detach().cpu().numpy(),
+            obs2_xy=lambda: self.additional_obs[0].geometry.center.native().detach().cpu().numpy(),
+        )
+        if not ids: ids = export_funcs.keys()
+        os.makedirs(path, exist_ok=True)
+        if delete_previous: shutil.rmtree(f"{path}/data/", ignore_errors=True)
+        os.makedirs(f"{path}/data/", exist_ok=True)
         for var in ids:
-            if not os.path.exists(f"{path}/data/{var}"):
-                os.mkdir(f"{path}/data/{var}")
-            if var == "pressure":
-                data = self.pressure.values.native().detach().cpu().numpy()
-            elif var == "vx":
-                data = self.velocity.x.data.native().detach().cpu().numpy()
-            elif var == "vy":
-                data = self.velocity.y.data.native().detach().cpu().numpy()
-            elif var == "obs_xy":
-                data = self.obstacle.geometry.center.native().detach().cpu().numpy()
-            elif var == "obs_vx":
-                data = self.obstacle.velocity.native().detach().cpu().numpy()[0]
-            elif var == "obs_vy":
-                data = self.obstacle.velocity.native().detach().cpu().numpy()[1]
-            elif var == "obs_ang":
-                data = self.obstacle.geometry.angle.native().view(1).detach().cpu().numpy()
-            elif var == "obs_ang_vel":
-                data = self.obstacle.angular_velocity.native().view(1).detach().cpu().numpy()
-            elif var == "obs_mask":
-                data = (HardGeometryMask(self.obstacle.geometry) >>
-                        self.pressure).data.native().detach().cpu().numpy()
-            elif var == 'fluid_force_x':
-                data = self.fluid_force.native().detach().cpu().numpy()[0]
-            elif var == 'fluid_force_y':
-                data = self.fluid_force.native().detach().cpu().numpy()[1]
-            elif var == 'fluid_torque_x':
-                data = self.fluid_torque.native().detach().cpu().numpy()[0]
-            elif var == 'fluid_torque_y':
-                data = self.fluid_torque.native().detach().cpu().numpy()[1]
-            elif var == 'fluid_torque':
-                data = math.sum(self.fluid_torque).native().detach().cpu().numpy()
-            elif var == "max_cfl":
-                data = (math.max(math.abs((self.velocity >> self.pressure).values)) * self.dt).native().detach().cpu().numpy()
+            if var in export_funcs.keys(): data = export_funcs[var]()
             else:
                 try:
                     data = getattr(self, var)
@@ -262,6 +265,7 @@ class TwoWayCouplingSimulation:
                 except:
                     print(f"Could not save variable {var}")
                     continue
+            os.makedirs(f"{path}/data/{var}", exist_ok=True)
             np.save(f"{path}/data/{var}/{var}_case{case:04d}_{step:04d}.npy", data)
 
     def apply_forces(self, additional_force: torch.Tensor = 0, additional_torque: torch.Tensor = 0):

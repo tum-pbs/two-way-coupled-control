@@ -14,3 +14,4 @@ data/*
 test_data/*
 .cache
 run_tests.sh
+wandb/

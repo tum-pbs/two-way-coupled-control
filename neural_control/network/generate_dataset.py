@@ -19,12 +19,12 @@ from Probes import Probes
 
 
 class Generator(TwoWayCouplingSimulation):
-    def __init__(self):
+    def __init__(self, device):
         """
         Initialize internal variables
 
         """
-        super().__init__()
+        super().__init__(device)
         self.n_vel_spline_knots = []
         self.initial_world = []
         self.plotter = Plotter(
@@ -113,27 +113,33 @@ class Generator(TwoWayCouplingSimulation):
         plt.show(block=True)
         return velocities
 
-    def create_destinations(self, n: int, bounds: list):
+    def create_destinations(self, n: int, domain_size: list, margins: list):
         """
         Create end points of trajectories
 
-        param: n: number of trajectories
-        param: bounds: list containing boundaries that endpoints should stay within
+        Params:
+            n: number of trajectories
+            domain_size: size of the domain
+            margins: margins of the domain
+
         """
         randomGenerator = np.random.RandomState()
         randomGenerator.seed(0)
         points = np.array([])
         values_x = []
         values_y = []
+        max_x = domain_size[0] - margins[0]
+        max_y = domain_size[1] - margins[1]
         for _ in range(n):
-            values_x += [randomGenerator.uniform(bounds[0][0], bounds[1][0])]
-            values_y += [randomGenerator.uniform(bounds[0][1], bounds[1][1])]
+            values_x += [randomGenerator.uniform(margins[0], max_x)]
+            values_y += [randomGenerator.uniform(margins[1], max_y)]
         points = []
         for x, y in zip(values_x, values_y):
             points += [[x, y]]
-        return points
         for point in points:
             plt.plot(*point, 'o')
+        plt.show(block=True)
+        return points
 
     def distribute_data(self, training_percentage: float, test_percentage: float = None):
         """
@@ -202,25 +208,42 @@ if __name__ == "__main__":
         "error_x",
         "error_y"
     )
-    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json")
-    inp.calculate_properties()
-    generator = Generator()
-    generator.set_initial_conditions(inp.obs_width, inp.obs_height, inp.sim_load_path)
+    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", ["supervised"])
+    inp.append_values(inp.supervised["initial_conditions_path"] + "inputs.json")
+    generator = Generator(inp.device)
+    generator.set_initial_conditions(inp.simulation['obs_width'], inp.simulation['obs_height'], inp.supervised["initial_conditions_path"])
     # Generate trajectories
-    destinations = generator.create_destinations(50, [0.4 * inp.domain_size, 0.6 * inp.domain_size])
-    velocities = generator.create_trajectories(int(inp.n_steps / 2 + 1), destinations, (inp.obs_xy[0], inp.obs_xy[1]), inp.dt)
+    destinations = generator.create_destinations(50, inp.simulation['domain_size'], inp.supervised['destinations_margins'])
+    velocities = generator.create_trajectories(
+        int(inp.supervised['dataset_n_steps'] / 2 + 1),
+        destinations,
+        (inp.simulation['obs_xy'][0], inp.simulation['obs_xy'][1]),
+        inp.simulation['dt'])
     velocities = np.concatenate((velocities, velocities * 0), axis=1)
     # Probes
-    probes = Probes(inp.obs_width / 2 + inp.probes_offset, inp.obs_height / 2 + inp.probes_offset, inp.probes_size, inp.probes_n_rows, inp.probes_n_columns, inp.obs_xy)
+    probes = Probes(
+        inp.simulation['obs_width'] / 2 + inp.probes_offset,
+        inp.simulation['obs_height'] / 2 + inp.probes_offset,
+        inp.probes_size,
+        inp.probes_n_rows,
+        inp.probes_n_columns,
+        inp.simulation['obs_xy'])
+    inp.supervised["destinations"] = destinations
+    inp.export(inp.supervised["dataset_path"] + "inputs.json")
     current = time.time()
     for i, velocity_curve in enumerate(velocities):
-        generator.setup_world(inp.domain_size, inp.dt, inp.obs_mass, inp.obs_inertia, inp.inflow_velocity)
-        for j in range(inp.n_steps - 1):
+        generator.setup_world(
+            inp.simulation['domain_size'],
+            inp.simulation['dt'],
+            inp.simulation['obs_mass'],
+            inp.simulation['obs_inertia'],
+            inp.simulation['inflow_velocity'])
+        for j in range(inp.supervised['dataset_n_steps'] - 1):
             generator.set_obstacle_velocity(velocity_curve[j])
             generator.advect()
             generator.make_incompressible()
             generator.calculate_fluid_forces()
-            (generator.control_force_x, generator.control_force_y) = -generator.fluid_force + inp.obs_mass * (velocity_curve[j + 1] - velocity_curve[j]) / inp.dt
+            (generator.control_force_x, generator.control_force_y) = -generator.fluid_force + inp.simulation['obs_mass'] * (velocity_curve[j + 1] - velocity_curve[j]) / inp.simulation['dt']
             # Probes
             probes.update_transform(generator.obstacle.geometry.center.numpy(), generator.obstacle.geometry.angle.numpy() - PI / 2)
             probes_points = probes.get_points_as_tensor()
@@ -232,9 +255,9 @@ if __name__ == "__main__":
             generator.reference_y = destinations[i][1]
             generator.error_x = destinations[i][0] - generator.obstacle.geometry.center.numpy()[0]
             generator.error_y = destinations[i][1] - generator.obstacle.geometry.center.numpy()[1]
-            generator.export_data(inp.supervised_datapath, i, j, export_vars, delete_previous=(i == 0 and j == 0))
+            generator.export_data(inp.supervised["dataset_path"], i, j, export_vars, delete_previous=(i == 0 and j == 0))
             if j % 50 == 0:
-                remaining = (time.time() - current) * ((inp.n_steps - 1 - j) + (len(velocities) - (i + 1)) * inp.n_steps) / 50
+                remaining = (time.time() - current) * ((inp.supervised['dataset_n_steps'] - 1 - j) + (len(velocities) - (i + 1)) * inp.supervised['dataset_n_steps']) / 50
                 remaining_h = np.floor(remaining / 60. / 60.)
                 remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
                 current = time.time()

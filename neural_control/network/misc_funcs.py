@@ -54,7 +54,7 @@ def extract_inputs(sim: TwoWayCouplingSimulation, probes: Probes, x_objective: t
     error_xy = (x_objective - sim.obstacle.geometry.center).native()
     fluid_force = sim.fluid_force.native()
     obs_velocity = sim.obstacle.velocity.native()
-    error_angle = (angle_objective - sim.obstacle.geometry.angle).native().view(1)
+    error_angle = (angle_objective - (sim.obstacle.geometry.angle - PI / 2)).native().view(1)
     fluid_torque = math.sum(sim.fluid_torque).native().view(1)
     ang_velocity = sim.obstacle.angular_velocity.native().view(1)
     # Transfer values to reference frame at box rotation
@@ -106,12 +106,20 @@ def rotate(xy: torch.Tensor, angle: float):
     return rotated_xy  # TODO Check this
 
 
-def calculate_loss(loss_inputs: math.Tensor, translation_only: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
+def calculate_loss(loss_inputs: math.Tensor, hyperparams: dict, translation_only: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Calculate loss
 
     Params:
         loss_inputs: inputs needed for calculating loss
+        hyperparams: hyperparameters of loss terms. Should have the following keys
+            - spatial
+            - velocity
+            - angle
+            - ang_velocity
+            - delta_force
+            - delta_torque
+            - proximity
         translation_only: if True then additional terms won't be calculated
 
     Returns:
@@ -124,22 +132,24 @@ def calculate_loss(loss_inputs: math.Tensor, translation_only: bool = False) -> 
     """
     x_error = loss_inputs[:, :, 0:2]
     obs_velocity = loss_inputs[:, :, 2:4]
-    spatial_term = 15 * torch.sum(x_error**2)
-    # Velocity term and angle term are pronounced only when spatial error is low
-    velocity_term = 1 * torch.sum(obs_velocity**2 / (x_error**2 * 0.5 + 1))
+    delta_force = loss_inputs[:, :, 4:6]  # TODO CHECK THIS
+    spatial_term = hyperparams['spatial'] * torch.sum(x_error**2)
+    # Other terms are pronounced only when spatial or angular error is low
+    velocity_term = hyperparams['velocity'] * torch.sum(obs_velocity**2 / (x_error**2 * hyperparams['proximity'] + 1))
     if not translation_only:
-        ang_error = loss_inputs[:, :, 4]
-        angular_velocity = loss_inputs[:, :, 5]
+        ang_error = loss_inputs[:, :, 4:5]
+        angular_velocity = loss_inputs[:, :, 5:6]
         delta_force = loss_inputs[:, :, 6:8]
-        delta_torque = loss_inputs[:, :, 8]
-        ang_term = 15 * torch.sum(ang_error**2 / (torch.sum(x_error**2) * 0.5 + 1))
-        # Angular velocity term is only pronounced when angular error is low
-        ang_vel_term = .2 * torch.sum(angular_velocity**2 / (ang_error**2 * 0.5 + 1))
+        delta_torque = loss_inputs[:, :, 8:9]
+        ang_term = hyperparams['angle'] * torch.sum(ang_error**2 / (torch.sum(x_error**2, 2, keepdim=True) * hyperparams['proximity'] + 1))
+        ang_vel_term = hyperparams['ang_velocity'] * torch.sum(angular_velocity**2 / (ang_error**2 * hyperparams['proximity'] + 1))
         # Avoid abrupt changes
-        force_term = 0.025 * torch.sum(delta_force**2)
-        torque_term = 0.025 * torch.sum(delta_torque**2)
+        torque_term = hyperparams['delta_torque'] * torch.sum(delta_torque**2)
+        # force_term = 0.025 * torch.sum(delta_force**2)
+        # torque_term = 0.025 * torch.sum(delta_torque**2)
     else:
-        ang_term = ang_vel_term = force_term = torque_term = torch.tensor(0)
+        ang_term = ang_vel_term = torque_term = torch.tensor(0)
+    force_term = hyperparams['delta_force'] * torch.sum(delta_force**2)
     loss = spatial_term + velocity_term + ang_term + ang_vel_term + force_term + torque_term
     loss_terms = dict(
         spatial=spatial_term,
@@ -163,9 +173,8 @@ def prepare_export_folder(path: str, initial_step: int):
 
     """
     print(" Preparing export folder ")
-    if not os.path.exists(path): os.mkdir(path)
-    if not os.path.exists(path + '/data/'): os.mkdir(path + '/data/')
-    if not os.path.exists(path + 'tensorboard/'): os.mkdir(path + 'tensorboard/')
+    os.makedirs(path, exist_ok=True)
+    os.makedirs(path + '/data/', exist_ok=True)
     path += 'data/'
     folders = [folder for folder in os.listdir(path) if "." not in folder]
     for folder in folders:
