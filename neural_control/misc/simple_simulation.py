@@ -1,7 +1,6 @@
-import argparse
-from TwoWayCouplingSimulation import TwoWayCouplingSimulation
-from InputsManager import InputsManager
 import os
+from InputsManager import InputsManager
+from TwoWayCouplingSimulation import TwoWayCouplingSimulation
 import torch
 
 if __name__ == "__main__":
@@ -13,11 +12,14 @@ if __name__ == "__main__":
         inp.simulation['obs_height'],
         obs_xy=inp.simulation['obs_xy'])
     simulation.setup_world(
+        inp.simulation['re'],
         inp.simulation['domain_size'],
         inp.simulation['dt'],
         inp.simulation['obs_mass'],
         inp.simulation['obs_inertia'],
-        inp.simulation['inflow_velocity'])
+        inp.simulation['inflow_velocity'],
+        inp.simulation['sponge_intensity'],
+        inp.simulation['sponge_size'])
     # Add a second box at the inflow boundary
     if inp.simulation['two_obstacles']:
         simulation.add_box(
@@ -26,12 +28,13 @@ if __name__ == "__main__":
             inp.simulation['obs_width'])
     with torch.no_grad():
         for i in range(initial_i, inp.simulation['n_steps']):
-            simulation.advect()
+            simulation.advect(inp.simulation["tripping_on"])
             simulation.make_incompressible()
             simulation.calculate_fluid_forces()
             # simulation.apply_forces()
             if i % inp.export_stride == 0:
                 print(i)
+                print("\n")
                 simulation.export_data(inp.simulation['path'], 0, int(i / inp.export_stride), delete_previous=i == 0)
     inp.export(inp.simulation['path'] + "inputs.json", only=['simulation', 'probes', 'export'])
     print("Done")

@@ -1,7 +1,6 @@
 from InputsManager import InputsManager
 # import torch.utils.tensorboard as tb
 from NeuralController import NeuralController
-from Logger import Logger
 from misc_funcs import *
 import argparse
 
@@ -10,9 +9,9 @@ if __name__ == "__main__":
     # ----------------------------------------------
     # -------------------- Inputs ------------------
     # ----------------------------------------------
-    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", ['online'])
+    inp = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json"), ['online'])
     inp.calculate_properties()
-    inp.add_values(inp.online['simulation_path'] + 'inputs.json')  # Load simulation inputs
+    inp.add_values(os.path.abspath(inp.online['simulation_path'] + 'inputs.json'), ["probes", "simulation"])  # Load simulation inputs
     if inp.device == "GPU":
         TORCH_BACKEND.set_default_device("GPU")
         device = torch.device("cuda:0")
@@ -28,7 +27,7 @@ if __name__ == "__main__":
     # ---------------- Setup simulation ------------
     # ----------------------------------------------
     sim = TwoWayCouplingSimulation(inp.device, inp.translation_only)
-    sim.set_initial_conditions(inp.simulation['obs_width'], inp.simulation['obs_height'], path=inp.simulation['path'])
+    sim.set_initial_conditions(inp.simulation['obs_width'], inp.simulation['obs_height'], path=os.path.abspath(inp.simulation['path']))
     probes = Probes(
         inp.simulation['obs_width'] / 2 + inp.probes_offset,
         inp.simulation['obs_height'] / 2 + inp.probes_offset,
@@ -50,11 +49,12 @@ if __name__ == "__main__":
     # ------------------- Setup NN -----------------
     # ----------------------------------------------
     if inp.resume_training:  # TODO
-        raise NotImplementedError
+        # raise NotImplementedError
         # Load most trained model
-        # model_file = natsorted((name for name in os.listdir(inp.model_path) if ".pth" in name))
-        # first_case = int(model_file[-1].split("trained_model_")[14:18]) + 1
-        # model = torch.load(inp.model_path + model_file[-1])
+        model_file = natsorted(name for name in os.listdir(os.path.abspath(inp.export_path)) if ".pth" in name)
+        print(f"Loading model {model_file[-1]}")
+        first_case = int(model_file[-1].split("trained_model_")[-1][:4]) + 1
+        model = torch.load(inp.export_path + model_file[-1])
     else:
         first_case = 0
         model = NeuralController(
@@ -80,12 +80,12 @@ if __name__ == "__main__":
     # ----------------------------------------------
     # Prepare folder for saving data
     prepare_export_folder(inp.export_path, first_case)  # TODO
-    torch.save(model, f"{inp.export_path}/initial_model_{first_case}.pth")
+    torch.save(model, os.path.abspath(f"{inp.export_path}/initial_model_{first_case}.pth"))
     # Create objectives
-    xy = torch.rand(2, inp.online['n_cases'] - first_case)
-    ang = torch.rand(inp.online['n_cases'] - first_case)
+    xy = torch.rand(2, inp.online['n_cases'])
+    ang = torch.rand(inp.online['n_cases'])
     # Gradually increase objectives distances
-    for case in range(first_case, inp.online['n_cases']):
+    for case in range(inp.online['n_cases']):
         growrate = np.min((inp.online['destinations_zone_growrate'] * (case + 1), 1.))
         margins = (inp.simulation['domain_size'] - destinations_zone_size * growrate) / 2
         xy[:, case] = xy[:, case] * destinations_zone_size * growrate + margins
@@ -102,6 +102,7 @@ if __name__ == "__main__":
     for case in range(first_case, inp.online['n_cases']):
         # Setup case with default initial values
         sim.setup_world(
+            inp.simulation['re'],
             inp.simulation['domain_size'],
             inp.simulation['dt'],
             inp.simulation['obs_mass'],
@@ -121,12 +122,6 @@ if __name__ == "__main__":
         last_control_torque = torch.zeros(1).to(device)
         loss = torch.zeros(1).to(device)
         loss_terms = torch.zeros((5)).to(device)
-        if inp.resume_training:
-            pass
-            # Resume training with new objectives
-            # for _ in range(first_case):
-            #     x_objective = torch.rand(2).to(device)
-            #     ang_objective = torch.rand(1).to(device)
         # Run simulation
         for i in range(1, inp.online['n_steps'] + 1):
             sim.apply_forces(control_force_global * ref_vars['force'], control_torque * ref_vars['torque'])
@@ -174,16 +169,7 @@ if __name__ == "__main__":
             nn_inputs_past = update_inputs(nn_inputs_past, nn_inputs_present, control_effort)
             # Export values
             if (i % inp.export_stride != 0): continue
-            # print(
-            #     f"\n \
-            #     Case: {case}, i: {i} \n \
-            #     Geo center: {sim.obstacle.geometry.center} \n \
-            #     Objective: {x_objective} \n \
-            #     Velocity: {sim.obstacle.velocity} \n  \
-            #     Control force: {control_force} \n  \
-            #     Fluid force: {sim.fluid_force} \n  \
-            #     Ang Vel: {sim.obstacle.angular_velocity} \n"
-            # )
+            print(f"\n \Case: {case}, i: {i} \n ")
             probes_points = probes.get_points_as_tensor()
             sim.probes_vx = sim.velocity.x.sample_at(probes_points).native().detach()
             sim.probes_vy = sim.velocity.y.sample_at(probes_points).native().detach()
@@ -200,5 +186,5 @@ if __name__ == "__main__":
                 sim.error_ang = loss_inputs_present[0, 4].detach().clone() * ref_vars['angle']
                 sim.control_torque = control_torque.detach().clone() * ref_vars['torque']
             sim.export_data(inp.export_path, case, int(i / inp.export_stride), inp.export_vars, (case == 0 and i == 0))
-            torch.save(model, f"{inp.export_path}/trained_model_{case:04d}.pth")
+            torch.save(model, os.path.abspath(f"{inp.export_path}/trained_model_{case:04d}.pth"))
         lr_scheduler.step()  # Decay learning rate after every case

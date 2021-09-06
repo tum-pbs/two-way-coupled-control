@@ -19,7 +19,7 @@ if __name__ == "__main__":
     model_id = int(args.model_index)
     run_paths = args.runpaths
     for run_path in run_paths:
-        inp = InputsManager(run_path + "/inputs.json", exclude=["simulation"])
+        inp = InputsManager(os.path.abspath(run_path + "/inputs.json"), exclude=["simulation"])
         if inp.device == "GPU":
             TORCH_BACKEND.set_default_device("GPU")
             device = torch.device("cuda:0")
@@ -29,7 +29,7 @@ if __name__ == "__main__":
         model_path = f"{run_path}/trained_model_{model_id:04d}.pth"
         print(f"\n\n Running tests on model {model_path}")
         # Load tests json
-        tests = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json", ["one_obstacle"])
+        tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), ["one_obstacle"])
         tests.model_path = model_path
         for test_label, test in [(key, value) for key, value in tests.__dict__.items() if isinstance(value, dict)]:  # Loop through tests
             # ----------------------------------------------
@@ -73,24 +73,24 @@ if __name__ == "__main__":
                 ang_velocity=inp.simulation['inflow_velocity'] / inp.simulation['obs_width']
             )
             last = 0
-            model = torch.load(model_path).to(device)
+            model = torch.load(os.path.abspath(model_path)).to(device)
             print("Model's state_dict:")
             for param_tensor in model.state_dict():
                 print(param_tensor, "\t", model.state_dict()[param_tensor].size())
             total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
             print(f"\n Total amount of trainable parameters: {total_params}")
             # Dataset used is used to get objectives and ground truth values if demanded
-            dataset = Dataset(tests.dataset_path, tests.tvt_ratio, ref_vars)
-            dataset.set_past_window_size(inp.past_window)
-            dataset.set_mode("validation")
-            torch.save(model, f"{export_path}{model_path.split('/')[-1]}")
+            # dataset = Dataset(tests.dataset_path, tests.tvt_ratio, ref_vars)
+            # dataset.set_past_window_size(inp.past_window)
+            # dataset.set_mode("validation")
+            torch.save(model, os.path.abspath(f"{export_path}{model_path.split('/')[-1]}"))
             # ----------------------------------------------
             # ------------------ Simulate ------------------
             # ----------------------------------------------
             with torch.no_grad():
                 is_first_export = True  # Used for deleting previous files on folder
                 for test_i, test_attrs in enumerate(value for key, value in test.items() if 'test' in key):
-                    sim.setup_world(inp.simulation['domain_size'], inp.simulation['dt'], inp.simulation['obs_mass'], inp.simulation['obs_inertia'], inp.simulation['inflow_velocity'])
+                    sim.setup_world(inp.simulation["re"], inp.simulation['domain_size'], inp.simulation['dt'], inp.simulation['obs_mass'], inp.simulation['obs_inertia'], inp.simulation['inflow_velocity'])
                     nn_inputs_past = torch.zeros((inp.past_window, 1, inp.n_past_features)).to(device)
                     control_force = torch.zeros(2).to(device)
                     control_force_global = torch.zeros(2).to(device)
@@ -120,8 +120,8 @@ if __name__ == "__main__":
                         if i < test_attrs['help_i'] and inp.translation_only:
                             if i <= inp.past_window:
                                 dataset_i = i - (1)
-                                _, gt_inputs_past, _, indexes = dataset.get_values_by_case_snapshot(test_i, [dataset_i])
-                                control_force_global = gt_inputs_past[0][[[indexes["control_force_x"][0], indexes["control_force_y"][0]]]]
+                                # _, gt_inputs_past, _, indexes = dataset.get_values_by_case_snapshot(test_i, [dataset_i])
+                                # control_force_global = gt_inputs_past[0][[[indexes["control_force_x"][0], indexes["control_force_y"][0]]]]
                             else:
                                 dataset_i = i - (1) - inp.past_window
                                 gt_inputs_present, gt_inputs_past, gt_force, indexes = dataset.get_values_by_case_snapshot(test_i, [dataset_i])

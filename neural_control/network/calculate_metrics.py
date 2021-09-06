@@ -12,7 +12,6 @@ import os
 from natsort import natsorted
 import argparse
 import matplotlib.pyplot as plt
-from Logger import Logger
 from traitlets.traitlets import default
 # colors = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
 colors = cycle(px.colors.qualitative.G10)
@@ -219,11 +218,11 @@ if __name__ == '__main__':
         run_path = root + run_folder
         # Pre process variables
         try:
-            inp = InputsManager(f"{run_path}/inputs.json")
+            inp = InputsManager(os.path.abspath(f"{run_path}/inputs.json"))
         except:
             print(f"Could not load information from {run_path}")
             continue
-        tests = os.listdir(run_path + "/tests/")
+        tests = os.listdir(os.path.abspath(run_path + "/tests/"))
         for test in tests:
             datapath = f"{run_path}/tests/{test}/data/"
             id = run_path.split("/")[-1]
@@ -242,7 +241,7 @@ if __name__ == '__main__':
             #         resume="must",
             #         id=inp.id)
             # Get files, cases and snapshots
-            all_files = os.listdir(f"{datapath}/error_x/")
+            all_files = os.listdir(os.path.abspath(f"{datapath}/error_x/"))
             all_files = [file.split("error_x")[1] for file in all_files]  # Remove prefix
             cases = natsorted(tuple(set([file.split("case")[1][:4] for file in all_files])))
             snapshots = natsorted(tuple(set((file.split("_")[-1][:4] for file in all_files))))
@@ -264,7 +263,7 @@ if __name__ == '__main__':
                 for var in vars:
                     for case in cases:
                         try:
-                            values = np.array([np.load(f"{datapath}/{var}/{var}_case{case}_{snapshot}.npy") for snapshot in snapshots])
+                            values = np.array([np.load(os.path.abspath(f"{datapath}/{var}/{var}_case{case}_{snapshot}.npy")) for snapshot in snapshots])
                         except:
                             print(f"Could not load {var} for case {case}")
                             continue
@@ -276,5 +275,5 @@ if __name__ == '__main__':
                 for metric_values, metric_label in zip(metrics_values, metrics_labels):
                     export_dict[f"{metric_name}{metric_label}"] = metric_values.tolist()  # Local logging
             # Export metrics to json file
-            with open(f"{inp.export_path}/tests/{test}/metrics.json", 'w') as f:
+            with open(os.path.abspath(f"{inp.export_path}/tests/{test}/metrics.json"), 'w') as f:
                 json.dump(export_dict, f, indent="    ")

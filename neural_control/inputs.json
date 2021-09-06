@@ -1,8 +1,8 @@
 {
     "translation_only": false,
-    "architecture": "lstm",
+    "architecture": "fc_only",
     "past_window": 3,
-    "resume_training": false,
+    "resume_training": true,
     "export_stride": 10,
     "learning_rate_decay_half_life": 50,
     "max_acc": 0.25,
@@ -13,10 +13,10 @@
     "probes_offset": 2,
     "probes_size": 4,
     "online": {
-        "simulation_path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/inlet_only_120x60/",
+        "simulation_path": "C:\\OneDrive\\Brener\\Germany\\TUM\\work\\PhiFlow\\storage\\inlet_only_120x60_rk2\\",
         "destinations_zone_growrate": 0.05,
         "n_steps": 1000,
-        "n_cases": 10,
+        "n_cases": 200,
         "learning_rate": 0.000500,
         "n_before_backprop": 6,
         "optimizer": "AdamW",
@@ -56,21 +56,30 @@
         }
     },
     "simulation": {
-        "path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/inlet_only_120x60/",
-        "n_steps": 20000,
+        "path": "C:\\OneDrive\\Brener\\Germany\\TUM\\work\\PhiFlow\\storage\\sponge_ramp_test\\",
+        "n_steps": 5000,
+        "re": 3000,
+        "tripping_on": false,
         "obs_density": 1.5,
-        "inflow_velocity": 3.0,
-        "two_obstacles": true,
+        "inflow_velocity": 3,
+        "two_obstacles": false,
         "dt": 0.1,
         "obs_width": 20,
         "obs_height": 6,
         "domain_size": [
-            170,
-            100
+            300,
+            150
         ],
         "obs_xy": [
             85,
-            50
+            75
+        ],
+        "sponge_intensity": 0.01,
+        "sponge_size": [
+            0,
+            5,
+            5,
+            5
         ]
     },
     "export_vars": [

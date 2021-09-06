@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import os
 from copy import deepcopy
 
 
@@ -104,7 +105,7 @@ class InputsManager():
                 for key2, value2 in value.items():
                     if type(value2).__module__ == np.__name__:
                         export_dict[key][key2] = value2.tolist()
-        with open(path, 'w') as f:
+        with open(os.path.abspath(path), 'w') as f:
             json.dump(export_dict, f, indent="    ")
 
     def add_values(self, path: str, only: list = []):
@@ -116,7 +117,7 @@ class InputsManager():
             only: if given, load only attributes that have this string on their name
 
         """
-        with open(path, 'r') as f:
+        with open(os.path.abspath(path), 'r') as f:
             values = json.load(f)
         for key, value in values.items():
             if only:

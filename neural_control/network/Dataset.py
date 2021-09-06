@@ -79,7 +79,7 @@ class Dataset(torch.utils.data.Dataset):
         for j in reversed(range(self.past_window)):
             for var in self.vars:
                 file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot-(j+1):04d}.npy'
-                data = np.load(file).reshape(-1,)
+                data = np.load(os.path.abspath(file)).reshape(-1,)
                 factor = self.ref_vars[self.ref_vars_hash[var]]
                 data /= factor
                 x_past += (*data,)
@@ -90,7 +90,7 @@ class Dataset(torch.utils.data.Dataset):
         x_present = ()
         for var in self.vars[:-2]:
             file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy'
-            data = np.load(file).reshape(-1,)
+            data = np.load(os.path.abspath(file)).reshape(-1,)
             factor = self.ref_vars[self.ref_vars_hash[var]]
             data /= factor
             x_present += (*data,)
@@ -100,7 +100,7 @@ class Dataset(torch.utils.data.Dataset):
         y = ()
         for var in self.vars[-2:]:
             file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy'
-            data = np.load(file).reshape(-1)
+            data = np.load(os.path.abspath(file)).reshape(-1)
             factor = self.ref_vars[self.ref_vars_hash[var]]
             data /= factor
             y += (*data,)
@@ -211,7 +211,7 @@ class Dataset(torch.utils.data.Dataset):
         """
         file_x = f'{self.path}/reference_x/reference_x_case{case:04d}_0000.npy'
         file_y = f'{self.path}/reference_y/reference_y_case{case:04d}_0000.npy'
-        destination = (np.load(file_x), np.load(file_y))
+        destination = (np.load(os.path.abspath(file_x)), np.load(os.path.abspath(file_y)))
         return destination
 
 

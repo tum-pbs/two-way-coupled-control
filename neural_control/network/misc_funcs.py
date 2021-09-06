@@ -173,15 +173,15 @@ def prepare_export_folder(path: str, initial_step: int):
 
     """
     print(" Preparing export folder ")
-    os.makedirs(path, exist_ok=True)
-    os.makedirs(path + '/data/', exist_ok=True)
+    os.makedirs(os.path.abspath(path), exist_ok=True)
+    os.makedirs(os.path.abspath(path) + '/data/', exist_ok=True)
     path += 'data/'
-    folders = [folder for folder in os.listdir(path) if "." not in folder]
+    folders = [folder for folder in os.listdir(os.path.abspath(path)) if "." not in folder]
     for folder in folders:
-        files = os.listdir(f"{path}/{folder}/")
+        files = os.listdir(os.path.abspath(f"{path}/{folder}/"))
         for file in files:
             if int(file.split("_")[-1][:4]) >= initial_step:
-                os.remove(f"{path}/{folder}/{file}")
+                os.remove(os.path.abspath(f"{path}/{folder}/{file}"))
     print(" Export folder ready ")
 
 
