@@ -100,3 +100,19 @@ def images2video(path, images_name, extension, output_name='movie.mp4', framerat
     stream = ffmpeg.input(path + images_name + '*.' + extension, pattern_type='glob', framerate=framerate)
 
     finish(stream, output_name, path)
+
+
+def pad(stream, width, height, x, y, color="white"):
+    """
+    Pad stream
+
+    Parameters:
+        stream: stream to be padded
+        width: width of the new stream
+        height: height of the new stream
+        x: x position of the new stream
+        y: y position of the new stream
+        color: color of padding
+
+    """
+    return ffmpeg.filter_(stream, 'pad', width=width, height=height, x=x, y=y, color=color)
