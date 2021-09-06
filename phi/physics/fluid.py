@@ -33,13 +33,13 @@ def make_incompressible(velocity: Grid,
 
     """
     input_velocity = velocity
-    velocity = apply_boundary_conditions(velocity, domain, obstacles).with_(extrapolation=domain.boundaries['near_vector_extrapolation'])
+    velocity = apply_boundary_conditions(velocity, domain, obstacles)  # .with_(extrapolation=domain.boundaries['near_vector_extrapolation'])
     active = domain.grid(HardGeometryMask(~union(*[obstacle.geometry for obstacle in obstacles])), extrapolation=domain.boundaries['active_extrapolation'])
     accessible = domain.grid(active, extrapolation=domain.boundaries['accessible_extrapolation'])
     hard_bcs = field.stagger(accessible, math.minimum, domain.boundaries['accessible_extrapolation'], type=type(velocity))
     div = divergence(velocity) * active
-    if domain.boundaries['near_vector_extrapolation'] == math.extrapolation.BOUNDARY:
-        div -= field.mean(div)
+    # if domain.boundaries['near_vector_extrapolation'] == math.extrapolation.BOUNDARY:
+    #     div -= field.mean(div)
 
     # Solve pressure
 
@@ -56,7 +56,7 @@ def make_incompressible(velocity: Grid,
     if math.all_available(converged) and not math.all(converged):
         # Temporary fallback if not converged
         converged, pressure, iterations = field.solve(laplace, y=div, x0=domain.scalar_grid(
-            field.Noise(pressure.shape, scale=1))/100., solve_params=solve_params, constants=[active, hard_bcs])
+            field.Noise(pressure.shape, scale=1)) / 100., solve_params=solve_params, constants=[active, hard_bcs])
         if math.all_available(converged) and not math.all(converged):
             raise AssertionError(f"pressure solve did not converge after {iterations} iterations\nResult: {pressure.values}")
     # Subtract grad pressure
@@ -86,7 +86,7 @@ def apply_boundary_conditions(velocity: Grid, domain: Domain, obstacles: tuple o
     # Mask hard boundaries and obstacle
     bcs = field.stagger(domain.scalar_grid(1, domain.boundaries['accessible_extrapolation']), math.minimum, domain.boundaries['accessible_extrapolation'], type=type(velocity))
     bcs *= 1 - (HardGeometryMask(union([obstacle.geometry for obstacle in obstacles])) >> bcs)
-    velocity *=  bcs
+    velocity *= bcs
     # Add obstacle velocity to fluid
     for obstacle in obstacles:
         if not obstacle.is_stationary:
