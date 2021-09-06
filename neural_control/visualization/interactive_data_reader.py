@@ -3,6 +3,7 @@ import time
 from re import U
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib import rcParams
 import numpy as np
 from tkinter import *
 from tkinter import font
@@ -11,6 +12,8 @@ from natsort import natsorted
 from itertools import chain
 from Plotter import Plotter
 from torch.nn.functional import pad
+
+rcParams.update({'font.size': 5})
 
 
 class Interactive_Data_Reader(Tk):
@@ -23,16 +26,16 @@ class Interactive_Data_Reader(Tk):
             window_size: size of GUI window
         """
         super(Interactive_Data_Reader, self).__init__()
-        self.log_variables = ["dataPath", "sModel", "sVar", "sAxis", "sPlotType", "sKwargs"]
+        self.log_path = os.path.abspath(log_path)
+        self.log_variables = ["dataPath", "sModel", "sVar", "sAxis", "sPlotType", "sKwargs", "iUpdatePlot"]
         self.title("Interactive_Data_Reader")
         self.nAxis = 6
         self.nMaxLoadedVariables = 30
-        self.minsize(500, 400)
         self.geometry(window_size)
         # String vars
         self.sModel = StringVar(self, " ")
         self.sTest = StringVar(self, " ")
-        self.dataPath = StringVar(self, "/home/ramos/work/PhiFlow2/PhiFlow/storage/")
+        self.dataPath = StringVar(self, os.path.abspath(log_path + "/"))
         self.sVar = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
         self.sKwargs = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
         self.sAxis = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
@@ -44,10 +47,13 @@ class Interactive_Data_Reader(Tk):
         self.plotter = Plotter()
         self.set_default()
         self.create_layout()
-        self.log_path = log_path
         self.load_log()
         self.bind_functions()
-        self.update_solutions()
+        try:
+            self.update_solutions()
+        except:
+            print("Could not load solutions. Make sure path is correct")
+            pass
         self.refresh_plots()
 
     def check_time(func):
@@ -73,15 +79,16 @@ class Interactive_Data_Reader(Tk):
         defaultFont = font.nametofont("TkDefaultFont")
         # Overriding default-font with custom settings
         # i.e changing font-family, size and weight
-        defaultFont.configure(size=15)
+        # defaultFont.configure(size=self.fontsize)
+        self.config(bg="white")
 
     def load_log(self):
         """
         Load log file containing information of previous runs
 
         """
-        if os.path.isfile(self.log_path + "/log.json"):
-            with open(self.log_path + "/log.json", "r") as f:
+        if os.path.isfile(os.path.abspath(self.log_path + "/log.json")):
+            with open(os.path.abspath(self.log_path + "/log.json"), "r") as f:
                 try:
                     inputs = json.load(f)
                 except json.JSONDecodeError:
@@ -106,7 +113,7 @@ class Interactive_Data_Reader(Tk):
         Save information to log file
 
         """
-        with open(self.log_path + "/log.json", "w") as f:
+        with open(os.path.abspath(self.log_path + "/log.json"), "w") as f:
             export_dict = {}
             for attribute in self.log_variables:
                 value = getattr(self, attribute)
@@ -118,42 +125,48 @@ class Interactive_Data_Reader(Tk):
         Create the widgets layout
 
         """
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_rowconfigure(1, weight=0)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=0)
         # Canva for input stuff
-        clicks = Canvas(self, width=300, height=500)
+        clicks = Canvas(self, bg="white")
+        for i in range(0, self.nMaxLoadedVariables + 10):
+            clicks.grid_columnconfigure(i, weight=1)
+            clicks.grid_rowconfigure(i, weight=1)
         # clicks.config(highlightbackground="black")
-        clicks.pack(side=LEFT, expand=True, padx=30, pady=30)
-        slides = Canvas(self, width=300, height=500)
-        slides.pack(side=BOTTOM, expand=True)
+        # clicks.pack(side=LEFT, expand=False, padx=30, pady=30, fill=BOTH)
+        clicks.grid(sticky="nsew", row=0, column=0, padx=30, pady=30)
         # Entry for datapath
         self.eEntry = Entry(clicks, textvariable=self.dataPath, width=100)
         clicks.create_window(200, 200, window=self.eEntry)
-        self.eEntry.grid(columnspan=5, row=0)
+        self.eEntry.grid(padx=3, pady=3, sticky="nsew", columnspan=7, row=0)
         # Button for updating filepaths
         self.bUpdatePaths = Button(clicks, text="Update paths")
-        self.bUpdatePaths.grid(row=2, column=0)
+        self.bUpdatePaths.grid(padx=3, pady=3, sticky="nsew", row=2, column=0)
         # Button for updating matplotlib plot
         self.bUpdatePlot = Button(clicks, text="Update plot")
         self.bUpdatePlot.config(bg="#cf5f5f")
-        self.bUpdatePlot.grid(row=2, column=1)
+        self.bUpdatePlot.grid(padx=3, pady=3, sticky="nsew", row=2, column=1)
         # Button for updating/reloading matplotlib plot
         self.bReloadVariables = Button(clicks, text="Reload plots")
-        self.bReloadVariables.grid(row=2, column=3)
+        self.bReloadVariables.grid(padx=3, pady=3, sticky="nsew", row=2, column=3)
         # Button for updating/reloading matplotlib plot
         self.bToggleRefresh = Button(clicks, text="Refresh all")
-        self.bToggleRefresh.grid(row=2, column=2)
+        self.bToggleRefresh.grid(padx=3, pady=3, sticky="nsew", row=2, column=2)
         # Simulation selector
         self.oModelSelector = OptionMenu(clicks, self.sModel, " ")
         self.oModelSelector.config(width=20)
-        self.oModelSelector.grid(column=0, row=3)
+        self.oModelSelector.grid(padx=3, pady=3, sticky="nsew", column=0, row=3)
         # Test selector
         self.oTestSelector = OptionMenu(clicks, self.sTest, " ")
         self.oTestSelector.config(width=20)
-        self.oTestSelector.grid(column=1, row=3)
+        self.oTestSelector.grid(padx=3, pady=3, sticky="nsew", column=1, row=3)
         # Checkbutton for test data
         self.iUseTestData = IntVar()
         self.iUseTestData.set(0)
         checkButton = Checkbutton(clicks, variable=self.iUseTestData, text="Test Data")
-        checkButton.grid(column=2, row=3)
+        checkButton.grid(padx=3, pady=3, sticky="nsew", column=2, row=3)
         # Overal widgets that are present in more than one line
         self.oVarSelector = []
         self.eKwargs = []
@@ -164,71 +177,80 @@ class Interactive_Data_Reader(Tk):
         for i in range(self.nMaxLoadedVariables):
             self.oVarSelector += [OptionMenu(clicks, self.sVar[i], " ")]
             self.oVarSelector[i].config(width=20)
-            self.oVarSelector[i].grid(column=1, row=4 + i)
+            self.oVarSelector[i].grid(padx=3, pady=3, sticky="nsew", column=1, row=4 + i)
             self.iUpdatePlot += [IntVar()]
             self.iUpdatePlot[i].set(1)
             checkButton = Checkbutton(clicks, variable=self.iUpdatePlot[i])
-            checkButton.grid(column=2, row=i + 4)
+            checkButton.grid(padx=3, pady=3, sticky="nsew", column=2, row=i + 4)
             self.bRefresh += [Button(clicks, text='Refresh')]
             self.oAxisSelector += [OptionMenu(clicks, self.sAxis[i], *[str(x) for x in range(self.nAxis)])]
-            self.oAxisSelector[i].grid(column=3, row=i + 4)
-            self.bRefresh[i].grid(row=i + 4, column=4)
+            self.oAxisSelector[i].grid(padx=3, pady=3, sticky="nsew", column=3, row=i + 4)
+            self.bRefresh[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=4)
             self.oPlotType += [OptionMenu(clicks, self.sPlotType[i], *self.plot_options)]
-            self.oPlotType[i].grid(row=i + 4, column=5, columnspan=1)
+            self.oPlotType[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=5, columnspan=1)
             self.eKwargs += [Entry(clicks, textvariable=self.sKwargs[i], width=20)]
-            self.eKwargs[i].grid(row=i + 4, column=6, columnspan=1)
-        # Slider to choose simulation case
-        # label.place(x=20)
-        local_canvas1 = Canvas(slides)
-        self.sCaseSelector = Scale(local_canvas1, orient=HORIZONTAL, length=450)
-        self.bNextCase = Button(local_canvas1, text=">")
-        self.bPreviousCase = Button(local_canvas1, text="<")
-        self.bPreviousCase.pack(side=LEFT, )
-        self.sCaseSelector.pack(side=LEFT, )
-        self.bNextCase.pack(side=LEFT, )
-        # Slider for different solutions
-        local_canvas2 = Canvas(slides)
-        self.sSnapshotSelector = Scale(local_canvas2, orient=HORIZONTAL, length=450)
-        self.bNextSnapshot = Button(local_canvas2, text=">")
-        self.bPreviousSnapshot = Button(local_canvas2, text="<")
-        self.bPreviousSnapshot.pack(side=LEFT, )
-        self.sSnapshotSelector.pack(side=LEFT, )
-        self.bNextSnapshot.pack(side=LEFT, )
-        label = Label(slides, text="Case ")
-        label.grid(row=0, column=0)
-        label = Label(slides, text="Snapshot ")
-        label.grid(row=0, column=1)
-        local_canvas1.grid(row=1, column=0, padx=30)
-        local_canvas2.grid(row=1, column=1, padx=30)
-        # Slider for different solutions
-        # Button for playing animations
-        self.bPlay = Button(clicks, text="Play")
-        self.bPlay.grid(row=i + 1 + 7, column=0)
-        # Button for stop playing animations
-        self.bStop = Button(clicks, text="Stop")
-        self.bStop.grid(row=i + 1 + 7, column=1)
-        # Button for skipping snapshots when playing
-        self.ePlaySkip = Entry(clicks, text="Skip")
-        self.ePlaySkip.grid(row=i + 1 + 7, column=2)
-        # Export check
-        self.iExport = IntVar()
-        self.iExport.set(0)
-        cExport = Checkbutton(clicks, text="Export")
-        cExport.grid(row=i + 1 + 7, column=3)
+            self.eKwargs[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=6, columnspan=1)
         # Matplotlib stuff
-        self.fig, self.axes = plt.subplots(int(self.nAxis / 2), int(2), figsize=(10, 10))
+        self.fig, self.axes = plt.subplots(int(self.nAxis / 2), int(2))
         self.axes = self.axes.reshape(-1)
         self.fig.tight_layout()
         self.display = FigureCanvasTkAgg(self.fig, master=self)  # A tk.DrawingArea.
         self.display.draw()
+        self.display.get_tk_widget().grid(sticky="nsew", column=1, row=0)
         self.toolbar = NavigationToolbar2Tk(self.display, self, pack_toolbar=False)
+        self.toolbar.config(bg="white")
         self.toolbar.update()
-        self.toolbar.pack(side=BOTTOM, fill=X)
-        self.display.get_tk_widget().pack(side=RIGHT, expand=True)
+        self.toolbar.grid(row=1, column=1, sticky="nsew")
         # Hack so that I can use plotter class
         for i in range(self.nAxis):
             self.plotter.check_plot_id(f"plot{i}", constrained_layout=False)
             self.plotter.figs[f"plot{i}"]["ax"] = self.axes[i]
+        # Sliders
+        slides = Frame(clicks, bg="white", highlightbackground="white")
+        slides.grid(sticky="nsew", row=99, columnspan=7)
+        for i in range(2):
+            slides.grid_rowconfigure(i, weight=1)
+            slides.grid_columnconfigure(i, weight=1)
+        local_frame1 = Frame(slides)
+        self.sCaseSelector = Scale(local_frame1, orient=HORIZONTAL)
+        self.bNextCase = Button(local_frame1, text=">")
+        self.bPreviousCase = Button(local_frame1, text="<")
+        self.bPreviousCase.pack(side=LEFT, )
+        self.sCaseSelector.pack(side=LEFT, expand=True, fill='x')
+        self.bNextCase.pack(side=LEFT, )
+        # Slider for different solutions
+        local_frame2 = Frame(slides)
+        self.sSnapshotSelector = Scale(local_frame2, orient=HORIZONTAL)
+        self.bNextSnapshot = Button(local_frame2, text=">")
+        self.bPreviousSnapshot = Button(local_frame2, text="<")
+        self.bPreviousSnapshot.pack(side=LEFT, )
+        self.sSnapshotSelector.pack(side=LEFT, expand=True, fill='x')
+        self.bNextSnapshot.pack(side=LEFT, )
+        label = Label(slides, text="Case ", bg="white")
+        label.grid(sticky="nsew", row=0, column=0)
+        label = Label(slides, text="Snapshot ", bg="white")
+        label.grid(sticky="nsew", row=0, column=1)
+        local_frame1.grid(sticky="nsew", row=1, column=0)
+        local_frame2.grid(sticky="nsew", row=1, column=1)
+        # Play buttons
+        play_frame = Frame(slides)
+        # Button for playing animations
+        self.bPlay = Button(play_frame, text="Play")
+        # Button for stop playing animations
+        self.bStop = Button(play_frame, text="Stop")
+        # Button for skipping snapshots when playing
+        label = Label(play_frame, text="Play Skip ", bg="white")
+        self.ePlaySkip = Entry(play_frame, width=2)
+        self.ePlaySkip.insert(0, "1")
+        # Export check
+        self.iExport = IntVar()
+        self.iExport.set(0)
+        cExport = Checkbutton(play_frame, text="Export")
+        self.bPlay.pack(side=LEFT)
+        self.bStop.pack(side=LEFT)
+        self.ePlaySkip.pack(side=LEFT)
+        cExport.pack(side=LEFT)
+        play_frame.grid(row=2, columnspan=2)
 
     def bind_functions(self):
         """
@@ -316,10 +338,11 @@ class Interactive_Data_Reader(Tk):
         current = int(self.sSnapshotSelector.get())
         if current >= maximum:
             current = self.sSnapshotSelector.cget("from")
+        skip = int(self.ePlaySkip.get())
         while current <= maximum and self.isPlaying:
             self.sSnapshotSelector.set(current)
-            self.update_snapshot.__wrapped__(self)
-            current += int(self.ePlaySkip.get())
+            self.update_snapshot(self)
+            current += skip
             if self.iExport:
                 path = f'{self.dataPath.get()}/movies/'
                 if not os.path.exists(f'{path}'): os.mkdir(path)
@@ -357,7 +380,7 @@ class Interactive_Data_Reader(Tk):
             self.datafolder = f"/tests/{self.sTest.get()}/data/"
         else:
             self.datafolder = "/data/"
-        variables = os.listdir(path + "/" + self.sModel.get() + self.datafolder)
+        variables = os.listdir(os.path.abspath(path + "/" + self.sModel.get() + self.datafolder))
         variables = natsorted(list(set([file.split("_case")[0] for file in variables])))
         for var, oVarSelector, checkBox in zip(self.sVar, self.oVarSelector, self.iUpdatePlot):
             if var.get() not in variables:
@@ -445,7 +468,7 @@ class Interactive_Data_Reader(Tk):
             # plt.tight_layout()
             self.refresh_plots(i=ids)
 
-    @ check_time
+    # @ check_time
     def update_snapshot(self, event=None):
         """
         Update plots according to current snapshot
@@ -459,7 +482,7 @@ class Interactive_Data_Reader(Tk):
                 continue
             var = self.sVar[i].get()
             case = self.sCaseSelector.get()
-            filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
+            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy")
             if not os.path.exists(filepath): continue  # Make sure file exists
             plotType = self.sPlotType[i].get()
             kwargs = {}
@@ -542,7 +565,7 @@ class Interactive_Data_Reader(Tk):
             var = self.sVar[i].get()
             case = self.sCaseSelector.get()
             plotType = self.sPlotType[i].get()
-            filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
+            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy")
             if not os.path.exists(filepath): continue  # Make sure file exists
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
@@ -555,7 +578,7 @@ class Interactive_Data_Reader(Tk):
                 snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
                 data = np.ones((2, int(snapshots[-1] - snapshots[0] + 1))) * snapshots
                 for j, snapshot_local in enumerate(snapshots):
-                    filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy"
+                    filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy")
                     loaded_data = np.load(filepath)
                     data[2 - loaded_data.size:, j] = loaded_data
                 self.plotHandle[i][0].set_data(data)
@@ -584,7 +607,7 @@ class Interactive_Data_Reader(Tk):
             case = self.sCaseSelector.get()
             axis = self.sAxis[i].get()
             plotType = self.sPlotType[i].get()
-            filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy"
+            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy")
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
             try:
@@ -616,7 +639,7 @@ class Interactive_Data_Reader(Tk):
                     snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
                     data = np.ones((2, int(snapshots[-1] - snapshots[0] + 1))) * snapshots
                     for j, snapshot_local in enumerate(snapshots):
-                        filepath = f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy"
+                        filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy")
                         loaded_data = np.load(filepath)
                         data[2 - loaded_data.size:, j] = loaded_data
                     self.plotter.add_data([data], [var])
@@ -680,6 +703,7 @@ class Interactive_Data_Reader(Tk):
 
 if __name__ == '__main__':
     # TODO create test
-    log_path = "/home/ramos/work/PhiFlow2/PhiFlow/neural_control/visualization/"
-    gui = Interactive_Data_Reader(log_path, "2600x1200")
+    log_path = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
+    gui = Interactive_Data_Reader(log_path, "2300x1200")
+    # gui = Interactive_Data_Reader(log_path, "2600x500")
     gui.mainloop()

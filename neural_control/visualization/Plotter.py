@@ -35,6 +35,7 @@ class Plotter():
         self.figsize = figsize
         plt.rc('axes', prop_cycle=(cycler('color', [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf'])))
         self.colors = cycle([u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf'])
+
         use('qt5agg')
 
     def set_export_path(self, path: str):
@@ -136,12 +137,12 @@ class Plotter():
             else:
                 image = ax.imshow(data['values'], **merged_kwargs)
             ax.set_title(id)
-            fig.colorbar(image, ax=ax)
+            cbar = fig.colorbar(image, ax=ax)
             export_filename_ = id if export_filename is None else export_filename
             if self.should_export:
                 self.export(fig, export_filename_)
             print('Created imshow figure with data from %s ' % (id))
-        return image, ax, fig
+        return image, ax, fig, cbar
 
     def export(self, fig: "plt.figure", name: str):
         """
