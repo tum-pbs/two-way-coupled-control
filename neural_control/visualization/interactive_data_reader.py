@@ -1,4 +1,5 @@
 import json
+from math import ceil
 import time
 from re import U
 import matplotlib.pyplot as plt
@@ -13,17 +14,17 @@ from itertools import chain
 from Plotter import Plotter
 from torch.nn.functional import pad
 
-rcParams.update({'font.size': 5})
-
 
 class Interactive_Data_Reader(Tk):
-    def __init__(self, log_path: str, window_size: str):
+    def __init__(self, log_path: str, window_size: str, matplotlib_area_size: tuple, font_size: int = 8):
         """
         Initialize GUI
 
         Params:
             log_path: path to log file that contain information of previous runs
             window_size: size of GUI window
+            matplotlib_area_size: size of matplotlib area
+
         """
         super(Interactive_Data_Reader, self).__init__()
         self.log_path = os.path.abspath(log_path)
@@ -32,6 +33,9 @@ class Interactive_Data_Reader(Tk):
         self.nAxis = 6
         self.nMaxLoadedVariables = 30
         self.geometry(window_size)
+        self.mpl_size = matplotlib_area_size
+        rcParams.update({'font.size': font_size})
+        self.font_size = font_size
         # String vars
         self.sModel = StringVar(self, " ")
         self.sTest = StringVar(self, " ")
@@ -70,6 +74,18 @@ class Interactive_Data_Reader(Tk):
         wrapper_time.__wrapped__ = func
         return wrapper_time
 
+    @property
+    def snapshot(self):
+        """
+        Selected snapshot that should respect skipping
+
+        """
+        snapshot = self.sSnapshotSelector.get()
+        skip = int(self.ePlaySkip.get())
+        valid_snapshot = ceil(snapshot / skip) * skip
+        self.sSnapshotSelector.set(valid_snapshot)
+        return valid_snapshot
+
     def set_default(self):
         """
         Override tkinter default values/options
@@ -79,7 +95,7 @@ class Interactive_Data_Reader(Tk):
         defaultFont = font.nametofont("TkDefaultFont")
         # Overriding default-font with custom settings
         # i.e changing font-family, size and weight
-        # defaultFont.configure(size=self.fontsize)
+        defaultFont.configure(size=self.font_size)
         self.config(bg="white")
 
     def load_log(self):
@@ -191,7 +207,9 @@ class Interactive_Data_Reader(Tk):
             self.eKwargs += [Entry(clicks, textvariable=self.sKwargs[i], width=20)]
             self.eKwargs[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=6, columnspan=1)
         # Matplotlib stuff
-        self.fig, self.axes = plt.subplots(int(self.nAxis / 2), int(2))
+
+        # Get tk window size in inches
+        self.fig, self.axes = plt.subplots(int(self.nAxis / 2), int(2), figsize=(self.mpl_size[0], self.mpl_size[1]))
         self.axes = self.axes.reshape(-1)
         self.fig.tight_layout()
         self.display = FigureCanvasTkAgg(self.fig, master=self)  # A tk.DrawingArea.
@@ -298,7 +316,7 @@ class Interactive_Data_Reader(Tk):
 
         """
         i = self.sSnapshotSelector.get()
-        self.sSnapshotSelector.set(i + 1)
+        self.sSnapshotSelector.set(i + 1 * int(self.ePlaySkip.get()))
         self.update_case()
 
     def next_case(self, event=None):
@@ -316,7 +334,7 @@ class Interactive_Data_Reader(Tk):
 
         """
         i = self.sSnapshotSelector.get()
-        self.sSnapshotSelector.set(i - 1)
+        self.sSnapshotSelector.set(i - 1 * int(self.ePlaySkip.get()))
         self.update_case()
 
     def previous_case(self, event=None):
@@ -362,7 +380,11 @@ class Interactive_Data_Reader(Tk):
 
         path = self.dataPath.get()
         # Models
-        models = os.listdir(path)
+        try:
+            models = os.listdir(path)
+        except:
+            print("Invalid path")
+            pass
         models = [file for file in models if "." not in file]  # Get folders only
         models = natsorted(models, key=lambda x: x.lower())
         update_dropdown(self.oModelSelector, self.sModel, models)
@@ -389,7 +411,7 @@ class Interactive_Data_Reader(Tk):
         # Update cases selector dropdown
         allCases = os.listdir(path + "/" + self.sModel.get() + self.datafolder + variables[0])
         cases = natsorted(list(set([file.split("case")[1][:4] for file in allCases])))
-        snapshots = natsorted([int(case.split("_")[-1][: 4]) for case in natsorted(allCases)
+        snapshots = natsorted([int(case.split("_")[2][:5]) for case in natsorted(allCases)
                                if f"{variables[0]}_case{self.sCaseSelector.get():04d}" in case])
         # Update axis selector dropdown
         for selector in self.sAxis:
@@ -475,14 +497,14 @@ class Interactive_Data_Reader(Tk):
 
         """
         path = self.dataPath.get()
-        snapshot = self.sSnapshotSelector.get()
+        snapshot = self.snapshot
         model = self.sModel.get()
         for i in range(self.nMaxLoadedVariables):
             if not self.iUpdatePlot[i].get():
                 continue
             var = self.sVar[i].get()
             case = self.sCaseSelector.get()
-            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy")
+            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy")
             if not os.path.exists(filepath): continue  # Make sure file exists
             plotType = self.sPlotType[i].get()
             kwargs = {}
@@ -509,7 +531,7 @@ class Interactive_Data_Reader(Tk):
                 if not (vars_set <= kwargs.keys()):
                     continue
                 x = np.load(filepath)
-                y = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:04d}.npy")
+                y = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:05d}.npy")
                 data = [x, y][::1 - 2 * (kwargs['x'] == False)]  # check if order should be inverted
                 kwargs.pop('x', None)
                 kwargs.pop('y', None)
@@ -522,8 +544,8 @@ class Interactive_Data_Reader(Tk):
                 if not (vars_set <= kwargs.keys()):
                     continue
                 data_xy = np.load(filepath)
-                data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:04d}.npy")
-                data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:04d}.npy")
+                data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:05d}.npy")
+                data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:05d}.npy")
                 self.plotHandle[i][0].set_UVC(data_u, data_v)
                 self.plotHandle[i][0].set_offsets(data_xy)
             # Torque
@@ -532,8 +554,8 @@ class Interactive_Data_Reader(Tk):
                 if not (vars_set <= kwargs.keys()):
                     continue
                 data_xy = np.load(filepath)
-                angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:04d}.npy")
-                torque = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:04d}.npy")
+                angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:05d}.npy")
+                torque = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:05d}.npy")
                 offset = kwargs['offset']
                 anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
                 anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])
@@ -557,7 +579,7 @@ class Interactive_Data_Reader(Tk):
 
         """
         path = self.dataPath.get()
-        snapshot = self.sSnapshotSelector.get()
+        snapshot = self.snapshot
         model = self.sModel.get()
         for i in range(self.nMaxLoadedVariables):
             if not self.iUpdatePlot[i].get():
@@ -565,7 +587,7 @@ class Interactive_Data_Reader(Tk):
             var = self.sVar[i].get()
             case = self.sCaseSelector.get()
             plotType = self.sPlotType[i].get()
-            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy")
+            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy")
             if not os.path.exists(filepath): continue  # Make sure file exists
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
@@ -578,7 +600,7 @@ class Interactive_Data_Reader(Tk):
                 snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
                 data = np.ones((2, int(snapshots[-1] - snapshots[0] + 1))) * snapshots
                 for j, snapshot_local in enumerate(snapshots):
-                    filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy")
+                    filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):05d}.npy")
                     loaded_data = np.load(filepath)
                     data[2 - loaded_data.size:, j] = loaded_data
                 self.plotHandle[i][0].set_data(data)
@@ -607,7 +629,7 @@ class Interactive_Data_Reader(Tk):
             case = self.sCaseSelector.get()
             axis = self.sAxis[i].get()
             plotType = self.sPlotType[i].get()
-            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy")
+            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy")
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
             try:
@@ -639,7 +661,7 @@ class Interactive_Data_Reader(Tk):
                     snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
                     data = np.ones((2, int(snapshots[-1] - snapshots[0] + 1))) * snapshots
                     for j, snapshot_local in enumerate(snapshots):
-                        filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):04d}.npy")
+                        filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):05d}.npy")
                         loaded_data = np.load(filepath)
                         data[2 - loaded_data.size:, j] = loaded_data
                     self.plotter.add_data([data], [var])
@@ -651,7 +673,7 @@ class Interactive_Data_Reader(Tk):
                     if not (vars_set <= kwargs.keys()):
                         continue
                     x = np.load(filepath)
-                    y = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:04d}.npy")
+                    y = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:05d}.npy")
                     data = [[x], [y]][::1 - 2 * (kwargs['x'] == False)]  # check if order should be inverted
                     kwargs.pop('x', None)
                     kwargs.pop('y', None)
@@ -670,8 +692,8 @@ class Interactive_Data_Reader(Tk):
                     if not (vars_set <= kwargs.keys()):
                         continue
                     data_xy = np.load(filepath)
-                    data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:04d}.npy")
-                    data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:04d}.npy")
+                    data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:05d}.npy")
+                    data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:05d}.npy")
                     kwargs.pop('u', None)
                     kwargs.pop('v', None)
                     self.plotHandle[i] = [self.axes[int(axis)].quiver(*data_xy, data_u, data_v, **kwargs)]
@@ -681,8 +703,8 @@ class Interactive_Data_Reader(Tk):
                     if not (vars_set <= kwargs.keys()):
                         continue
                     data_xy = np.load(filepath)
-                    angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:04d}.npy")
-                    torque = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:04d}.npy")
+                    angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:05d}.npy")
+                    torque = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:05d}.npy")
                     offset = kwargs['offset']
                     anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
                     anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])
@@ -704,6 +726,6 @@ class Interactive_Data_Reader(Tk):
 if __name__ == '__main__':
     # TODO create test
     log_path = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-    gui = Interactive_Data_Reader(log_path, "2300x1200")
+    gui = Interactive_Data_Reader(log_path, "2300x1200", (10, 10))
     # gui = Interactive_Data_Reader(log_path, "2600x500")
     gui.mainloop()
