@@ -2,8 +2,8 @@
     "translation_only": false,
     "architecture": "fc_only",
     "past_window": 3,
-    "resume_training": true,
-    "export_stride": 10,
+    "resume_training": false,
+    "export_stride": 20,
     "learning_rate_decay_half_life": 50,
     "max_acc": 0.25,
     "max_ang_acc": 0.025,
@@ -13,36 +13,36 @@
     "probes_offset": 2,
     "probes_size": 4,
     "online": {
-        "simulation_path": "C:\\OneDrive\\Brener\\Germany\\TUM\\work\\PhiFlow\\storage\\inlet_only_120x60_rk2\\",
+        "simulation_path": "/home/ramos/phiflow/storage/baseline_175x110_re3000/",
         "destinations_zone_growrate": 0.05,
-        "n_steps": 1000,
-        "n_cases": 200,
+        "n_steps": 2000,
+        "n_cases": 100,
         "learning_rate": 0.000500,
-        "n_before_backprop": 6,
+        "n_before_backprop": 18,
         "optimizer": "AdamW",
         "destinations_margins": [
-            20,
-            20
+            50,
+            25
         ],
         "hyperparams": {
             "spatial": 15,
             "velocity": 1,
             "delta_force": 0.025,
-            "angle": 15,
+            "angle": 30,
             "ang_velocity": 0.2,
             "delta_torque": 0.025,
             "proximity": 0.5
         }
     },
     "supervised": {
-        "initial_conditions_path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/inlet_only_120x60/",
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_175x110_re3000/",
         "learning_rate_": 0.004,
         "n_epochs": 251,
-        "dataset_path": "/home/ramos/work/PhiFlow2/PhiFlow/storage/translation/supervised/supervised_dataset/",
-        "dataset_n_steps": 1000,
+        "dataset_path": "/home/ramos/phiflow/storage/translation/supervised/supervised_dataset2/",
+        "dataset_n_steps": 2000,
         "destinations_margins": [
-            20,
-            20
+            50,
+            25
         ],
         "tvt_ratio": [
             0.8,
@@ -56,8 +56,8 @@
         }
     },
     "simulation": {
-        "path": "C:\\OneDrive\\Brener\\Germany\\TUM\\work\\PhiFlow\\storage\\sponge_ramp_test\\",
-        "n_steps": 5000,
+        "path": "/home/ramos/phiflow/storage/dummy/",
+        "n_steps": 8000,
         "re": 3000,
         "tripping_on": false,
         "obs_density": 1.5,
@@ -66,20 +66,21 @@
         "dt": 0.1,
         "obs_width": 20,
         "obs_height": 6,
+        "time_step_scheme": "SL",
         "domain_size": [
-            300,
-            150
+            120,
+            60
         ],
         "obs_xy": [
-            85,
-            75
+            40,
+            30
         ],
-        "sponge_intensity": 0.01,
+        "sponge_intensity": 0.0,
         "sponge_size": [
             0,
-            5,
-            5,
-            5
+            0,
+            0,
+            0
         ]
     },
     "export_vars": [
@@ -111,6 +112,8 @@
         "loss_ang_vel",
         "fluid_torque",
         "control_torque",
-        "reference_angle"
+        "reference_angle",
+        "vorticity",
+        "cfl"
     ]
 }

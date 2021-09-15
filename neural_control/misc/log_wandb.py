@@ -7,7 +7,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Log results to Weights and Biases")
     parser.add_argument("run_path", help="path to run folder")
     run_path = parser.parse_args().run_path
-    run_name = run_path.split('/')[-1]
+    run_name = run_path.split('/')[-2]
     # Load inputs json file
     with open(run_path + '/inputs.json', 'r') as f:
         inp = json.load(f)
@@ -16,8 +16,6 @@ if __name__ == '__main__':
     os.environ["WANDB_DIR"] = run_path
     os.environ["WANDB_MODE"] = "run"  # Run wandb online so we can sync with previous run
     wandb.init(project="neural_controller_translation_only" if inp["translation_only"] else "neural_controller", name=run_name)
-    wandb.run.name = run_name
-    wandb.run.save()
     wandb.config.update(inp)
     for test in tests:
         with open(run_path + f'/tests/{test}/metrics.json', 'r') as f:
@@ -38,4 +36,6 @@ if __name__ == '__main__':
         inp["id"] = wandb.run.id
         json.dump(inp, f, indent="    ")
     # Finish logging
+    wandb.run.name = run_name
+    wandb.run.save()
     wandb.finish()

@@ -55,10 +55,12 @@ def make_incompressible(velocity: Grid,
     converged, pressure, iterations = field.solve(laplace, y=div, x0=pressure_guess, solve_params=solve_params, constants=[active, hard_bcs])
     if math.all_available(converged) and not math.all(converged):
         # Temporary fallback if not converged
-        converged, pressure, iterations = field.solve(laplace, y=div, x0=domain.scalar_grid(
-            field.Noise(pressure.shape, scale=1)) / 100., solve_params=solve_params, constants=[active, hard_bcs])
-        if math.all_available(converged) and not math.all(converged):
-            raise AssertionError(f"pressure solve did not converge after {iterations} iterations\nResult: {pressure.values}")
+        while not math.all(converged):
+            print("Pressure did not converge. Trying again with different initial guess")
+            converged, pressure, iterations = field.solve(laplace, y=div, x0=domain.scalar_grid(
+                field.Noise(pressure.shape, scale=1)) / 100., solve_params=solve_params, constants=[active, hard_bcs])
+        # if math.all_available(converged) and not math.all(converged):
+        #     raise AssertionError(f"pressure solve did not converge after {iterations} iterations\nResult: {pressure.values}")
     # Subtract grad pressure
     gradp = field.spatial_gradient(pressure, type=type(velocity)) * hard_bcs
     velocity = (velocity - gradp).with_(extrapolation=input_velocity.extrapolation)

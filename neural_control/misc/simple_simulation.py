@@ -4,6 +4,16 @@ from TwoWayCouplingSimulation import TwoWayCouplingSimulation
 import torch
 
 if __name__ == "__main__":
+    export_vars = [
+        "pressure",
+        "vx",
+        "vy",
+        "vorticity",
+        "cfl",
+        "fluid_force_x",
+        "fluid_force_y",
+        "obs2_xy"
+    ]
     simulation = TwoWayCouplingSimulation("GPU")
     inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", 'simulation')
     inp.calculate_properties()
@@ -23,11 +33,12 @@ if __name__ == "__main__":
     # Add a second box at the inflow boundary
     if inp.simulation['two_obstacles']:
         simulation.add_box(
-            [inp.simulation['obs_width'], inp.simulation['domain_size'][1] / 2],
-            inp.simulation['obs_width'],
+            [inp.simulation['obs_width'] * 2, inp.simulation['domain_size'][1] / 2],
+            inp.simulation['obs_height'],
             inp.simulation['obs_width'])
     with torch.no_grad():
         for i in range(initial_i, inp.simulation['n_steps']):
+            simulation.inflow_velocity = inp.simulation['inflow_velocity'] * min((i / 500., 1.))  # Gradually increase inflow velocity
             simulation.advect(inp.simulation["tripping_on"])
             simulation.make_incompressible()
             simulation.calculate_fluid_forces()
@@ -35,6 +46,6 @@ if __name__ == "__main__":
             if i % inp.export_stride == 0:
                 print(i)
                 print("\n")
-                simulation.export_data(inp.simulation['path'], 0, int(i / inp.export_stride), delete_previous=i == 0)
-    inp.export(inp.simulation['path'] + "inputs.json", only=['simulation', 'probes', 'export'])
+                simulation.export_data(inp.simulation['path'], 0, int(i / inp.export_stride), delete_previous=i == 0, ids=export_vars)
+    inp.export(inp.simulation['path'] + "/inputs.json", only=['simulation', 'probes', 'export'])
     print("Done")

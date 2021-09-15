@@ -16,4 +16,4 @@ test_data/*
 run_tests.sh
 wandb/
 myenv/
-build/*
+build/

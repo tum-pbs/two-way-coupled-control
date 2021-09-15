@@ -12,9 +12,22 @@ import os
 from natsort import natsorted
 import argparse
 import matplotlib.pyplot as plt
-from traitlets.traitlets import default
 # colors = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
 colors = cycle(px.colors.qualitative.G10)
+
+
+def calculate_variability(y: np.array, y_additional: np.array = 0, normalizing_factor: float = 1):
+    """
+    Calculate how much y varies between consecutive points on average
+
+    Params:
+        y: y component
+        normalizing_factor: normalizing factor
+
+    Returns:
+    """
+    values = np.sqrt(y**2 + y_additional**2) / normalizing_factor
+    return (np.mean(np.abs(values[1:] - values[:-1])),), ('',)
 
 
 def calculate_error(x: np.array, y: np.array = 0, normalizing_factor: float = 1):
@@ -197,11 +210,19 @@ if __name__ == '__main__':
             'vars': ['error_ang'],
             'func': calculate_stopping_error,
         },
-        'control_force': {
+        'force_change': {
+            'vars': ['control_force_x', 'control_force_y'],
+            'func': calculate_variability,
+        },
+        'force_mean': {
             'vars': ['control_force_x', 'control_force_y'],
             'func': calculate_mean,
         },
-        'control_torque': {
+        'torque_change': {
+            'vars': ['control_torque'],
+            'func': calculate_variability,
+        },
+        'torque_mean': {
             'vars': ['control_torque'],
             'func': calculate_mean,
         }
@@ -275,5 +296,5 @@ if __name__ == '__main__':
                 for metric_values, metric_label in zip(metrics_values, metrics_labels):
                     export_dict[f"{metric_name}{metric_label}"] = metric_values.tolist()  # Local logging
             # Export metrics to json file
-            with open(os.path.abspath(f"{inp.export_path}/tests/{test}/metrics.json"), 'w') as f:
+            with open(os.path.abspath(f"{run_path}/tests/{test}/metrics.json"), 'w') as f:
                 json.dump(export_dict, f, indent="    ")

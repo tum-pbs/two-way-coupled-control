@@ -29,30 +29,32 @@ if __name__ == "__main__":
         model_path = f"{run_path}/trained_model_{model_id:04d}.pth"
         print(f"\n\n Running tests on model {model_path}")
         # Load tests json
-        tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), ["one_obstacle"])
+        tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), ["test1"])  # TODO should run all tests
         tests.model_path = model_path
         for test_label, test in [(key, value) for key, value in tests.__dict__.items() if isinstance(value, dict)]:  # Loop through tests
             # ----------------------------------------------
             # ---------------- Setup simulation ------------
             # ----------------------------------------------
-            inp.add_values(test["initial_conditions_path"] + "inputs.json", ["simulation"])  # Load parameters of initial conditions
+            inp.add_values(test["initial_conditions_path"] + "/inputs.json", ["simulation"])  # Load parameters of initial conditions
             # Create list of scalar variables that will be exported every step
             export_vars_scalar = list(inp.export_vars)
             for entry in list(export_vars_scalar):
-                if entry in ["pressure", "vx", "vy", "obs_mask", ]:
+                if entry in ["pressure", "vx", "vy", "obs_mask", "vorticity"]:
                     export_vars_scalar.remove(entry)
                 if "loss" in entry:
                     export_vars_scalar.remove(entry)
                     inp.export_vars.remove(entry)
             # Save tests used in this script
-            export_path = f"{inp.export_path}/tests/{test_label}_{model_id}/"
+            export_path = f"{run_path}/tests/{test_label}_{model_id}/"
+            print(f"\n Data will be saved on {export_path} \n")
             prepare_export_folder(export_path, 0)
             tests.export(export_path + "tests.json", only=[test_label, "dataset_path", "tvt_ratio"])
             sim = TwoWayCouplingSimulation(inp.device, inp.translation_only)
             sim.set_initial_conditions(
                 inp.simulation['obs_width'],
                 inp.simulation['obs_height'],
-                path=inp.simulation['path'])
+                test["initial_conditions_path"],
+                obs_xy=inp.simulation['obs_xy'])
             probes = Probes(
                 inp.simulation["obs_width"] / 2 + inp.probes_offset,
                 inp.simulation['obs_height'] / 2 + inp.probes_offset,
@@ -90,7 +92,15 @@ if __name__ == "__main__":
             with torch.no_grad():
                 is_first_export = True  # Used for deleting previous files on folder
                 for test_i, test_attrs in enumerate(value for key, value in test.items() if 'test' in key):
-                    sim.setup_world(inp.simulation["re"], inp.simulation['domain_size'], inp.simulation['dt'], inp.simulation['obs_mass'], inp.simulation['obs_inertia'], inp.simulation['inflow_velocity'])
+                    sim.setup_world(
+                        inp.simulation["re"],
+                        inp.simulation['domain_size'],
+                        inp.simulation['dt'],
+                        inp.simulation['obs_mass'],
+                        inp.simulation['obs_inertia'],
+                        inp.simulation['inflow_velocity'],
+                        inp.simulation['sponge_intensity'],
+                        inp.simulation['sponge_size'],)
                     nn_inputs_past = torch.zeros((inp.past_window, 1, inp.n_past_features)).to(device)
                     control_force = torch.zeros(2).to(device)
                     control_force_global = torch.zeros(2).to(device)
@@ -154,22 +164,11 @@ if __name__ == "__main__":
                         if (i % inp.export_stride != 0) or (i < inp.past_window + 1):
                             export_vars = export_vars_scalar
                         else:
-                            i_remaining = (len([key for key in test.keys() if 'test' in key]) - test_i - 1) * test_attrs['n_steps'] + (test_attrs['n_steps'] - i)
+                            i_remaining = (len([key for key in test.keys() if 'test' in key]) - test_i - 1) * test_attrs['n_steps'] + (test_attrs['n_steps'] - i - 1)
                             remaining = i_remaining * delta
-                            print(i_remaining)
                             remaining_h = np.floor(remaining / 60. / 60.)
                             remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
-                            print(
-                                f"\n \
-                                Model: {model_path}, i: {i} \n \
-                                Geo center: {sim.obstacle.geometry.center} \n \
-                                Objective: {x_objective} \n \
-                                Velocity: {sim.obstacle.velocity} \n  \
-                                Control force: {control_force} \n  \
-                                Fluid force: {sim.fluid_force} \n  \
-                                Ang Vel: {sim.obstacle.angular_velocity} \n \
-                                Time left: {remaining_h:.0f}h and {remaining_m:.0f} min \n"
-                            )
+                            print(f"Time left: {remaining_h:.0f}h and {remaining_m:.0f} min")
                             export_vars = inp.export_vars
                         sim.export_data(export_path, test_i, i, export_vars, is_first_export)
                         is_first_export = False

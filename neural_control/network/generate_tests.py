@@ -39,20 +39,17 @@ if __name__ == "__main__":
     export_dict["dataset_path"] = inp.supervised['dataset_path']
     export_dict["tvt_ratio"] = inp.supervised['tvt_ratio']
     tests = dict(
-        one_obstacle=dict(
-            inflow_obs_freq=lambda: 0,
+        test1=dict(
             help_i=lambda: 0,
-            initial_conditions_path="/home/ramos/work/PhiFlow2/PhiFlow/storage/inlet_only_120x60/"
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_re3000/"
         ),
-        two_obstacles=dict(
-            inflow_obs_freq=lambda: 0,
+        test2=dict(
             help_i=lambda: 0,
-            initial_conditions_path="/home/ramos/work/PhiFlow2/PhiFlow/storage/inlet_only_170x100_two_obstacles/"
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_two_obstacles_re3000/"
         ),
-        two_moving_obstacles=dict(
-            inflow_obs_freq=lambda: (1. / (randomGenerator.rand(1) * 500 + 200)).tolist(),  # Period = [200, 700] steps
+        test3=dict(
             help_i=lambda: 0,
-            initial_conditions_path="/home/ramos/work/PhiFlow2/PhiFlow/storage/inlet_only_170x100_two_obstacles/")
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_two_obstacles_re8000/")
     )
     # Export initial conditions
     for label, test_attrs in tests.items():
@@ -68,7 +65,6 @@ if __name__ == "__main__":
                 n_steps=2001,
                 help_i=test_attrs["help_i"](),
                 angles=angles,
-                inflow_obs_freq=test_attrs["inflow_obs_freq"]()
             )
     with open(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json", "w") as f:
         json.dump(export_dict, f, indent="    ")

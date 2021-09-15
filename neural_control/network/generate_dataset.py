@@ -209,7 +209,7 @@ if __name__ == "__main__":
         "error_y"
     )
     inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", ["supervised"])
-    inp.append_values(inp.supervised["initial_conditions_path"] + "inputs.json")
+    inp.add_values(inp.supervised["initial_conditions_path"] + "inputs.json", ["probes", "simulation"])
     generator = Generator(inp.device)
     generator.set_initial_conditions(inp.simulation['obs_width'], inp.simulation['obs_height'], inp.supervised["initial_conditions_path"])
     # Generate trajectories
@@ -233,11 +233,14 @@ if __name__ == "__main__":
     current = time.time()
     for i, velocity_curve in enumerate(velocities):
         generator.setup_world(
+            inp.simulation['re'],
             inp.simulation['domain_size'],
             inp.simulation['dt'],
             inp.simulation['obs_mass'],
             inp.simulation['obs_inertia'],
-            inp.simulation['inflow_velocity'])
+            inp.simulation['inflow_velocity'],
+            inp.simulation['sponge_intensity'],
+            inp.simulation['sponge_size'])
         for j in range(inp.supervised['dataset_n_steps'] - 1):
             generator.set_obstacle_velocity(velocity_curve[j])
             generator.advect()

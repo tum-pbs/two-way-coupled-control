@@ -3,6 +3,7 @@ from InputsManager import InputsManager
 from NeuralController import NeuralController
 from misc_funcs import *
 import argparse
+from time import time
 
 
 if __name__ == "__main__":
@@ -19,10 +20,9 @@ if __name__ == "__main__":
         TORCH_BACKEND.set_default_device("CPU")
         device = torch.device("cpu")
     parser = argparse.ArgumentParser(description='Train nn in an online setting')
-    parser.add_argument("export_path", help="path that will contain run folder")
-    parser.add_argument("runname", help="name of run that will be used in logs and folder")
+    parser.add_argument("export_path", help="data will be saved in this path")
     args = parser.parse_args()
-    inp.export_path = args.export_path + args.runname + '/'
+    inp.export_path = args.export_path + '/'
     # ----------------------------------------------
     # ---------------- Setup simulation ------------
     # ----------------------------------------------
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     # ---------- Pre training processing -----------
     # ----------------------------------------------
     # Prepare folder for saving data
-    prepare_export_folder(inp.export_path, first_case)  # TODO
+    prepare_export_folder(inp.export_path, first_case)
     torch.save(model, os.path.abspath(f"{inp.export_path}/initial_model_{first_case}.pth"))
     # Create objectives
     xy = torch.rand(2, inp.online['n_cases'])
@@ -99,6 +99,7 @@ if __name__ == "__main__":
     # ----------------------------------------------
     # ----------------- Simulation -----------------
     # ----------------------------------------------
+    last_time = time()
     for case in range(first_case, inp.online['n_cases']):
         # Setup case with default initial values
         sim.setup_world(
@@ -107,7 +108,9 @@ if __name__ == "__main__":
             inp.simulation['dt'],
             inp.simulation['obs_mass'],
             inp.simulation['obs_inertia'],
-            inp.simulation['inflow_velocity'])
+            inp.simulation['inflow_velocity'],
+            inp.simulation['sponge_intensity'],
+            inp.simulation['sponge_size'])
         # Variables initialization
         nn_inputs_past = torch.zeros((inp.past_window, 1, inp.n_past_features)).to(device)
         if inp.translation_only:
@@ -138,7 +141,7 @@ if __name__ == "__main__":
                 control_effort = torch.clamp(control_effort, -1., 1.)
                 control_force = control_effort[0, :2]
                 angle_tensor = -(sim.obstacle.geometry.angle - math.PI / 2.0).native()
-                control_force_global = rotate(control_force, angle_tensor)
+                control_force_global = rotate(control_force, angle_tensor)  # Control force at global reference of frame (used for visualization only)
                 # Additional inputs for loss
                 delta_control_effort = control_force - last_control_force
                 last_control_force = control_force
@@ -169,7 +172,7 @@ if __name__ == "__main__":
             nn_inputs_past = update_inputs(nn_inputs_past, nn_inputs_present, control_effort)
             # Export values
             if (i % inp.export_stride != 0): continue
-            print(f"\n \Case: {case}, i: {i} \n ")
+            # print(f"\n Case: {case}, i: {i} \n ")
             probes_points = probes.get_points_as_tensor()
             sim.probes_vx = sim.velocity.x.sample_at(probes_points).native().detach()
             sim.probes_vy = sim.velocity.y.sample_at(probes_points).native().detach()
@@ -187,4 +190,12 @@ if __name__ == "__main__":
                 sim.control_torque = control_torque.detach().clone() * ref_vars['torque']
             sim.export_data(inp.export_path, case, int(i / inp.export_stride), inp.export_vars, (case == 0 and i == 0))
             torch.save(model, os.path.abspath(f"{inp.export_path}/trained_model_{case:04d}.pth"))
+            # Calculate how much time is left
+            current_time = time()
+            steps_left = ((inp.online['n_cases'] - (case + 1)) * inp.online['n_steps'] + inp.online['n_steps'] - (i + 1)) / inp.export_stride
+            time_left = steps_left * (current_time - last_time) / 3600
+            last_time = current_time
+            time_left_hours = int(time_left)
+            time_left_minutes = int((time_left - time_left_hours) * 60)
+            print(f"Time left: {time_left_hours:d}h {time_left_minutes:d} min")
         lr_scheduler.step()  # Decay learning rate after every case

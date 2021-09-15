@@ -57,8 +57,8 @@ def extract_inputs(sim: TwoWayCouplingSimulation, probes: Probes, x_objective: t
     error_angle = (angle_objective - (sim.obstacle.geometry.angle - PI / 2)).native().view(1)
     fluid_torque = math.sum(sim.fluid_torque).native().view(1)
     ang_velocity = sim.obstacle.angular_velocity.native().view(1)
-    # Transfer values to reference frame at box rotation
-    negative_angle = (sim.obstacle.geometry.angle - math.PI / 2.0).native()  # TODO Check this
+    # Transfer values to box local reference frame
+    negative_angle = (sim.obstacle.geometry.angle - math.PI / 2.0).native()
     # negative_angle = torch.tensor(0)
     probes_velocity = rotate(probes_velocity, negative_angle)
     error_xy = rotate(error_xy, negative_angle)
@@ -101,9 +101,10 @@ def rotate(xy: torch.Tensor, angle: float):
         rotated_cooridnates: xy rotated by angle with dimension [2,n]
 
     """
-    matrix = torch.tensor([[torch.cos(angle), -torch.sin(angle)], [torch.sin(angle), torch.cos(angle)]]).cuda()
+    device = torch.device("cuda:0") if xy.is_cuda else torch.device("cpu")
+    matrix = torch.tensor([[torch.cos(angle), -torch.sin(angle)], [torch.sin(angle), torch.cos(angle)]]).to(device)
     rotated_xy = torch.matmul(matrix, xy)
-    return rotated_xy  # TODO Check this
+    return rotated_xy
 
 
 def calculate_loss(loss_inputs: math.Tensor, hyperparams: dict, translation_only: bool = False) -> Tuple[torch.Tensor, torch.Tensor]:

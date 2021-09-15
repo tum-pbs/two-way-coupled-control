@@ -23,17 +23,19 @@ class TwoWayCouplingSimulation:
 
     """
 
-    def __init__(self, device: str, translation_only: bool = False):
+    def __init__(self, device: str, translation_only: bool = False, time_step_scheme: str = 'RK2'):
         """
         Class initializer. If translation_only is True, simulation won't have rotation
 
         Params:
             device: GPU or CPU
             translation_only: if True then obstacle will not rotate
+            time_step_scheme: 'RK2' for 2nd order Runge Kutta or 'SL' for semi lagrangian scheme
 
         """
         self.ic = {}
         self.translation_only = translation_only
+        self.time_step_scheme = time_step_scheme
         self.additional_obs = []
         if device == "GPU":
             TORCH_BACKEND.set_default_device("GPU")
@@ -48,9 +50,9 @@ class TwoWayCouplingSimulation:
         obs_h: float,
         path: str = None,
         obs_xy: list = None,
-        obs_ang: float = PI / 2,
+        obs_ang: float = [0.],
         obs_vel: list = [0., 0.],
-        obs_ang_vel: float = 0.,
+        obs_ang_vel: float = [0.],
     ):
         """
         Set the initial conditions of simulation. If a path is given then the initial conditions will be loaded from
@@ -75,27 +77,24 @@ class TwoWayCouplingSimulation:
         self.ic["obs_h"] = torch.as_tensor(obs_h).to(self.device)
         if path:
             # Get snapshot and case for loading
-            files = [file for file in os.listdir(
-                f"{path}/data/") if "." not in file]
-            files = natsorted([file for file in os.listdir(
-                f"{path}/data/{files[0]}/") if ".npy" in file])
+            files = [file for file in os.listdir(f"{path}/data/") if "." not in file]
+            files = natsorted([file for file in os.listdir(f"{path}/data/{files[0]}/") if ".npy" in file])
             case_snapshot = "_".join(files[-1].split("_")[-2:])
-            for var in [
-                "pressure",
-                "vx",
-                "vy",
-                "obs_xy",
-                "obs_vx",
-                "obs_vy",
-                "obs_ang",
-                "obs_ang_vel",
-            ]:
-                self.ic[var] = torch.as_tensor(np.load(f"{path}/data/{var}/{var}_{case_snapshot}")).to(self.device)
+            for var in ["pressure", "vx", "vy", "obs_xy", "obs_vx", "obs_vy", "obs_ang", "obs_ang_vel", ]:
+                # Try to load variable from path
+                try:
+                    self.ic[var] = torch.as_tensor(np.load(f"{path}/data/{var}/{var}_{case_snapshot}")).to(self.device)
+                # If it does not work, use default values
+                except:
+                    print(f"Loading default value for {var}")
+                    if var == "obs_vx": self.ic["obs_vx"] = torch.as_tensor(obs_vel[0]).to(self.device)
+                    elif var == "obs_vy": self.ic["obs_vy"] = torch.as_tensor(obs_vel[1]).to(self.device)
+                    else: self.ic[var] = torch.as_tensor(locals()[var]).to(self.device)
                 if var in ["vx", "vy"]: self.ic[var] = math.tensor(self.ic[var], ("x", "y"))
                 if var == 'obs_ang': self.ic[var] += PI / 2  # Account for difference in angle convention
             # Try to load a second obstacle
             try:
-                self.ic['obs2_xy'] = torch.as_tensor(np.load(f"{path}/data/obs2_xy/obs2_xy_case0000_0000.npy"))
+                self.ic['obs2_xy'] = torch.as_tensor(np.load(f"{path}/data/obs2_xy/obs2_xy_case0000_00000.npy")[0])  # Currently only supports one obstacle
             except:
                 print("Did not found data of second obstacle")
                 pass
@@ -109,10 +108,10 @@ class TwoWayCouplingSimulation:
             self.ic["obs_vx"] = obs_vel[0]
             self.ic["obs_vy"] = obs_vel[1]
             self.ic["obs_ang_vel"] = math.tensor((torch.as_tensor(obs_ang_vel),), convert=True)
-            self.ic["obs_ang"] = math.tensor((torch.as_tensor(obs_ang),), convert=True)
+            self.ic["obs_ang"] = math.tensor((torch.as_tensor(obs_ang),), convert=True) + PI / 2
             return 0
 
-    def setup_world(self, re: float, domain_size: list, dt: float, obs_mass: float, obs_inertia: float, inflow_velocity: float, sponge_intensity: float = 0.0, sponge_size: list = [0, 0, 0, 0]):
+    def setup_world(self, re: float, domain_size: list, dt: float, obs_mass: float, obs_inertia: float, inflow_velocity: float, sponge_intensity: float, sponge_size: list):
         """
         Setup world for simulation with a box on it
 
@@ -158,7 +157,7 @@ class TwoWayCouplingSimulation:
         )
         # Add additional obstacle if it was provided
         try:
-            self.add_box(self.ic["obs2_xy"], self.ic["obs_w"], self.ic["obs_w"])
+            self.add_box(self.ic["obs2_xy"], self.ic["obs_h"], self.ic["obs_w"])
         except:
             print("\n Only one obstacle in simulation")
             pass
@@ -178,17 +177,17 @@ class TwoWayCouplingSimulation:
             # Bottom boundary
             points_y = -(points.vector[1] - sponge_size[1])
             sponge = (math.abs(points_y) + points_y) / 2  # Make negatives be 0
-            sponge = sponge / sponge_size[1]
+            sponge = sponge / (sponge_size[1] + 1e-9)
             placeholder[0] += [sponge]
             # Right boundary
             points_x = points.vector[0] - (domain_size[0] - sponge_size[2])
             sponge = (math.abs(points_x) + points_x) / 2  # Make negatives be 0
-            sponge = sponge / sponge_size[2]  # Normalize
+            sponge = sponge / (sponge_size[2] + 1e-9)  # Normalize
             placeholder[1] += [sponge]
             # Top boundary
             points_y = points.vector[1] - (domain_size[1] - sponge_size[3])
             sponge = (math.abs(points_y) + points_y) / 2  # Make negatives be 0
-            sponge = sponge / sponge_size[3]
+            sponge = sponge / (sponge_size[3] + 1e-9)
             placeholder[2] += [sponge]
         masks = [self.domain.staggered_grid(math.channel_stack(values, "vector")) for values in placeholder]
         self.sponge_normal_mask = (masks[0] > 0) * (0, -1) + (masks[1] * (1, 0) > 0) + (masks[2] * (0, 1) > 0)
@@ -234,16 +233,21 @@ class TwoWayCouplingSimulation:
         # u3 = self.velocity + self.dt * rhs3
         # rhs4, self.du_dx, self.du_dy, self.dv_dx, self.dv_dy = rhs(u3)
         # convection_term = self.velocity + 1 / 6. * self.dt * (rhs1 + 2 * (rhs2 + rhs3) * rhs4)
-        # 2nd order RK
-        rhs1 = rhs(self.velocity)
-        k1 = self.dt * rhs1
-        rhs2 = rhs(self.velocity + k1)
-        k2 = self.dt * rhs2
-        convection_term = self.velocity + (k1 + k2) / 2.
+
+        # Convective term
+        if self.time_step_scheme == 'RK2':
+            # 2nd order RK
+            rhs1 = rhs(self.velocity)
+            k1 = self.dt * rhs1
+            rhs2 = rhs(self.velocity + k1)
+            k2 = self.dt * rhs2
+            convection_term = self.velocity + (k1 + k2) / 2.
+        elif self.time_step_scheme == 'SL':
+            convection_term = advect.semi_lagrangian(self.velocity, self.velocity, self.dt)
+        else: raise ValueError("Unknown time step scheme")
         # Diffusive term
         velocity_laplace = math.laplace(self.velocity.values)
         diffusion_term = velocity_laplace * self.viscosity
-        # self.velocity = advect.semi_lagrangian(self.velocity, self.velocity, self.dt) + diffusion_term
         self.velocity = self.velocity.copied_with(values=convection_term.values + diffusion_term, extrapolation=self.velocity.extrapolation)
         # Apply sponge
         # If the velocity is aligned with boundary outward normal, deaccelerate, otherwise set it to 0
@@ -252,6 +256,7 @@ class TwoWayCouplingSimulation:
         vel_boundaries = vel_boundaries * (vel_boundaries > 0)   # Avoid creating flow in opposite normal direction
         vel_boundaries = vel_boundaries * self.sponge_normal_mask  # Project velocity back
         self.velocity = self.velocity * (1 - self.sponge_mask) + vel_boundaries
+        # Obstacle advection
         # Tripping
         if tripping_on:
             tripping_x = math.random_uniform(self.velocity.x.shape) * 0.5 + 0.5
@@ -259,7 +264,6 @@ class TwoWayCouplingSimulation:
             tripping = math.channel_stack((tripping_x, tripping_y), "vector")
         else: tripping = 1
         self.velocity = self.velocity * (1 - self.inflow_velocity_mask.values) + self.inflow_velocity_mask.values * (self.inflow_velocity, 0) * tripping
-        # Obstacle advection
         new_geometry = self.obstacle.geometry.rotated(-self.obstacle.angular_velocity * self.dt)
         new_geometry = new_geometry.shifted(self.obstacle.velocity * self.dt)
         self.obstacle = self.obstacle.copied_with(geometry=new_geometry, age=self.obstacle.age + self.dt)
@@ -358,7 +362,7 @@ class TwoWayCouplingSimulation:
                     print(f"Could not save variable {var}")
                     continue
             os.makedirs(f"{path}/data/{var}", exist_ok=True)
-            np.save(os.path.abspath(f"{path}/data/{var}/{var}_case{case:04d}_{step:04d}.npy"), data)
+            np.save(os.path.abspath(f"{path}/data/{var}/{var}_case{case:04d}_{step:05d}.npy"), data)
 
     def apply_forces(self, additional_force: torch.Tensor = 0, additional_torque: torch.Tensor = 0):
         """
