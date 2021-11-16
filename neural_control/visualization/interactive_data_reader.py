@@ -364,7 +364,7 @@ class Interactive_Data_Reader(Tk):
             if self.iExport:
                 path = f'{self.dataPath.get()}/movies/'
                 if not os.path.exists(f'{path}'): os.mkdir(path)
-                self.fig.savefig(f'{path}{self.sSnapshotSelector.get()}.png', facecolor='w', edgecolor='w', dpi=200)
+                self.fig.savefig(f'{path}{self.sSnapshotSelector.get():05d}.png', facecolor='w', edgecolor='w', dpi=200)
 
     def update_solutions(self, event=None):
         """
@@ -402,7 +402,11 @@ class Interactive_Data_Reader(Tk):
             self.datafolder = f"/tests/{self.sTest.get()}/data/"
         else:
             self.datafolder = "/data/"
-        variables = os.listdir(os.path.abspath(path + "/" + self.sModel.get() + self.datafolder))
+        try:
+            variables = os.listdir(os.path.abspath(path + "/" + self.sModel.get() + self.datafolder))
+        except:
+            print("Invalid path")
+            return
         variables = natsorted(list(set([file.split("_case")[0] for file in variables])))
         for var, oVarSelector, checkBox in zip(self.sVar, self.oVarSelector, self.iUpdatePlot):
             if var.get() not in variables:
@@ -411,8 +415,7 @@ class Interactive_Data_Reader(Tk):
         # Update cases selector dropdown
         allCases = os.listdir(path + "/" + self.sModel.get() + self.datafolder + variables[0])
         cases = natsorted(list(set([file.split("case")[1][:4] for file in allCases])))
-        snapshots = natsorted([int(case.split("_")[2][:5]) for case in natsorted(allCases)
-                               if f"{variables[0]}_case{self.sCaseSelector.get():04d}" in case])
+        snapshots = natsorted([int(case.split("_")[-1][:5]) for case in natsorted(allCases) if f"{variables[0]}_case{self.sCaseSelector.get():04d}" in case])
         # Update axis selector dropdown
         for selector in self.sAxis:
             if selector.get() == " ":
@@ -543,7 +546,13 @@ class Interactive_Data_Reader(Tk):
                 vars_set = {'u', 'v'}
                 if not (vars_set <= kwargs.keys()):
                     continue
-                data_xy = np.load(filepath)
+                offset = 0
+                if "offset" in kwargs and "angle" in kwargs:
+                    angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:05d}.npy")[0]
+                    offset = (kwargs["offset"] * np.cos(-angle), kwargs["offset"] * np.sin(-angle))
+                    kwargs.pop('offset', None)
+                    kwargs.pop('angle', None)
+                data_xy = np.load(filepath) + offset
                 data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:05d}.npy")
                 data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:05d}.npy")
                 self.plotHandle[i][0].set_UVC(data_u, data_v)
@@ -691,7 +700,13 @@ class Interactive_Data_Reader(Tk):
                     vars_set = {'u', 'v'}
                     if not (vars_set <= kwargs.keys()):
                         continue
-                    data_xy = np.load(filepath)
+                    offset = 0
+                    if "offset" in kwargs and "angle" in kwargs:
+                        angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:05d}.npy")[0]
+                        offset = (kwargs["offset"] * np.cos(-angle), kwargs["offset"] * np.sin(-angle))
+                        kwargs.pop('offset', None)
+                        kwargs.pop('angle', None)
+                    data_xy = np.load(filepath) + offset
                     data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:05d}.npy")
                     data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:05d}.npy")
                     kwargs.pop('u', None)

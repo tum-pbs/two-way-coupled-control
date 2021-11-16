@@ -1,28 +1,30 @@
 {
-    "translation_only": false,
+    "translation_only": true,
     "architecture": "fc_only",
     "past_window": 3,
     "resume_training": false,
     "export_stride": 20,
-    "learning_rate_decay_half_life": 50,
+    "learning_rate_decay_half_life": 5000,
     "max_acc": 0.25,
     "max_ang_acc": 0.025,
     "device": "GPU",
     "probes_n_rows": 2,
     "probes_n_columns": 3,
-    "probes_offset": 2,
+    "probes_offset": 4,
     "probes_size": 4,
     "online": {
-        "simulation_path": "/home/ramos/phiflow/storage/baseline_175x110_re3000/",
-        "destinations_zone_growrate": 0.05,
-        "n_steps": 2000,
-        "n_cases": 100,
+        "simulation_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
+        "destinations_zone_growrate": 0.33,
+        "n_timesteps": 1000,
+        "simulation_dropout": 1.0,
+        "n_iterations": 15001,
         "learning_rate": 0.000500,
-        "n_before_backprop": 18,
+        "n_before_backprop": 16,
+        "model_export_stride": 150,
         "optimizer": "AdamW",
         "destinations_margins": [
-            50,
-            25
+            20,
+            20
         ],
         "hyperparams": {
             "spatial": 15,
@@ -35,47 +37,53 @@
         }
     },
     "supervised": {
-        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_175x110_re3000/",
-        "learning_rate_": 0.004,
-        "n_epochs": 251,
-        "dataset_path": "/home/ramos/phiflow/storage/translation/supervised/supervised_dataset2/",
-        "dataset_n_steps": 2000,
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
+        "learning_rate": 0.004,
+        "n_iterations": 800001,
+        "dataset_path": "/home/ramos/phiflow/storage/translation/supervised_dataset_simple/",
+        "dataset_n_steps": 1000,
+        "model_export_stride": 8000,
+        "n_simulations": 100,
+        "optimizer": "AdamW",
         "destinations_margins": [
-            50,
-            25
+            20,
+            20
         ],
         "tvt_ratio": [
-            0.8,
-            0.2,
-            0.0
+            0.1,
+            0.1,
+            0.8
         ],
         "dataloader_params": {
             "batch_size": 50,
             "shuffle": true,
-            "num_workers": 2
+            "num_workers": 8
         }
     },
     "simulation": {
-        "path": "/home/ramos/phiflow/storage/dummy/",
-        "n_steps": 8000,
-        "re": 3000,
+        "path": "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
+        "n_steps": 101,
+        "re": 1000,
         "tripping_on": false,
         "obs_density": 1.5,
-        "inflow_velocity": 3,
+        "reference_velocity": 1,
+        "inflow_on": false,
         "two_obstacles": false,
+        "obs2_ang_vel": 0.00,
         "dt": 0.1,
-        "obs_width": 20,
-        "obs_height": 6,
-        "time_step_scheme": "SL",
+        "obs_type": "disc",
+        "obs_width": 5,
+        "obs_height": 5,
+        "time_step_scheme": "RK2",
         "domain_size": [
-            120,
-            60
+            80,
+            80
         ],
         "obs_xy": [
             40,
-            30
+            40
         ],
-        "sponge_intensity": 0.0,
+        "sponge_intensity": 0.01,
         "sponge_size": [
             0,
             0,
@@ -91,8 +99,6 @@
         "obs_xy",
         "obs_vx",
         "obs_vy",
-        "obs_ang",
-        "obs_ang_vel",
         "control_force_x",
         "control_force_y",
         "fluid_force_x",
@@ -107,12 +113,9 @@
         "loss_spatial",
         "error_x",
         "error_y",
-        "error_ang",
         "loss_ang",
         "loss_ang_vel",
         "fluid_torque",
-        "control_torque",
-        "reference_angle",
         "vorticity",
         "cfl"
     ]

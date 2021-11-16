@@ -46,6 +46,7 @@ class TwoWayCouplingSimulation:
 
     def set_initial_conditions(
         self,
+        obs_type: str,
         obs_w: float,
         obs_h: float,
         path: str = None,
@@ -60,6 +61,7 @@ class TwoWayCouplingSimulation:
         Otherwise initial conditions for obstacle have to be provided.
 
         Params:
+            obs_type: type of obstacle, can be 'box' or 'disc'
             obs_w: width of obstacle
             obs_h: height of obstacle
             path: path to directory that contains folders with data that can be loaded
@@ -73,8 +75,10 @@ class TwoWayCouplingSimulation:
 
         """
         assert obs_xy or path  # At least one of these must be provided
+        assert(obs_type in ['box', 'disc'])
         self.ic["obs_w"] = torch.as_tensor(obs_w).to(self.device)
         self.ic["obs_h"] = torch.as_tensor(obs_h).to(self.device)
+        self.ic["obs_type"] = obs_type
         if path:
             # Get snapshot and case for loading
             files = [file for file in os.listdir(f"{path}/data/") if "." not in file]
@@ -95,6 +99,12 @@ class TwoWayCouplingSimulation:
             # Try to load a second obstacle
             try:
                 self.ic['obs2_xy'] = torch.as_tensor(np.load(f"{path}/data/obs2_xy/obs2_xy_case0000_00000.npy")[0])  # Currently only supports one obstacle
+                try:
+                    self.ic['obs2_ang'] = torch.as_tensor(np.load(f"{path}/data/obs2_ang/obs2_ang_{case_snapshot}")[0])
+                    self.ic['obs2_ang_vel'] = torch.as_tensor(np.load(f"{path}/data/obs2_ang_vel/obs2_ang_vel_{case_snapshot}")[0])
+                except:
+                    self.ic['obs2_ang'] = torch.as_tensor(PI / 2)
+                    self.ic['obs2_ang_vel'] = torch.as_tensor(0)
             except:
                 print("Did not found data of second obstacle")
                 pass
@@ -111,7 +121,7 @@ class TwoWayCouplingSimulation:
             self.ic["obs_ang"] = math.tensor((torch.as_tensor(obs_ang),), convert=True) + PI / 2
             return 0
 
-    def setup_world(self, re: float, domain_size: list, dt: float, obs_mass: float, obs_inertia: float, inflow_velocity: float, sponge_intensity: float, sponge_size: list):
+    def setup_world(self, re: float, domain_size: list, dt: float, obs_mass: float, obs_inertia: float, reference_velocity: float, sponge_intensity: float, sponge_size: list, inflow_on: bool = True):
         """
         Setup world for simulation with a box on it
 
@@ -121,7 +131,9 @@ class TwoWayCouplingSimulation:
             dt: step size for time marching
             obs_mass: obstacle's mass
             obs_inertia: obstacle's moment of inertia
-            inflow_velocity: velocity of inflow
+            reference_velocity: reference velocity for calculating viscosity
+            sponge_intensity: intensity of sponge layer
+            sponge_size: size of sponge layer
 
         """
         self.dt = dt
@@ -147,17 +159,20 @@ class TwoWayCouplingSimulation:
         self.velocity = self.domain.staggered_grid(
             math.channel_stack((self.ic["vx"], self.ic["vy"]), "vector"))
         # Obstacle
-        lower = torch.as_tensor([self.ic["obs_xy"][0] - self.ic["obs_w"] / 2, self.ic["obs_xy"][1] - self.ic["obs_h"] / 2]).to(self.device)
-        upper = torch.as_tensor([self.ic["obs_xy"][0] + self.ic["obs_w"] / 2, self.ic["obs_xy"][1] + self.ic["obs_h"] / 2]).to(self.device)
-        obstacle_geometry = Box(lower, upper).rotated(self.ic["obs_ang"][0])
+        if self.ic['obs_type'] == "box":
+            lower = torch.as_tensor([self.ic["obs_xy"][0] - self.ic["obs_w"] / 2, self.ic["obs_xy"][1] - self.ic["obs_h"] / 2]).to(self.device)
+            upper = torch.as_tensor([self.ic["obs_xy"][0] + self.ic["obs_w"] / 2, self.ic["obs_xy"][1] + self.ic["obs_h"] / 2]).to(self.device)
+            geometry = Box(lower, upper).rotated(self.ic["obs_ang"][0])
+        elif self.ic['obs_type'] == "disc":
+            geometry = Sphere(torch.as_tensor(self.ic["obs_xy"]).to(self.device), torch.as_tensor(self.ic["obs_w"]).to(self.device))
         self.obstacle = Obstacle(
-            obstacle_geometry,
+            geometry,
             velocity=math.tensor(torch.as_tensor((self.ic["obs_vx"], self.ic["obs_vy"])).to(self.device)),
             angular_velocity=math.tensor(self.ic["obs_ang_vel"][0], convert=True),
         )
         # Add additional obstacle if it was provided
         try:
-            self.add_box(self.ic["obs2_xy"], self.ic["obs_h"], self.ic["obs_w"])
+            self.add_box(self.ic["obs2_xy"], self.ic["obs_h"], self.ic["obs_w"], self.ic["obs2_ang"], self.ic["obs2_ang_vel"])
         except:
             print("\n Only one obstacle in simulation")
             pass
@@ -165,9 +180,9 @@ class TwoWayCouplingSimulation:
         self.inflow_velocity_mask = HardGeometryMask(Box[:0.5, :]) >> self.velocity
         self.velocity += self.inflow_velocity_mask
         self.velocity -= self.inflow_velocity_mask
-        self.inflow_velocity = inflow_velocity
+        self.inflow_velocity = reference_velocity * inflow_on
         self.re = re
-        self.viscosity = inflow_velocity * self.ic["obs_w"] / re
+        self.viscosity = reference_velocity * self.ic["obs_w"] / re
         # Sponge masks
         points_uv = self.velocity.points.unstack("staggered")
         # Sponge on the right boundary has a ramp in the u-direction
@@ -256,17 +271,23 @@ class TwoWayCouplingSimulation:
         vel_boundaries = vel_boundaries * (vel_boundaries > 0)   # Avoid creating flow in opposite normal direction
         vel_boundaries = vel_boundaries * self.sponge_normal_mask  # Project velocity back
         self.velocity = self.velocity * (1 - self.sponge_mask) + vel_boundaries
-        # Obstacle advection
         # Tripping
         if tripping_on:
             tripping_x = math.random_uniform(self.velocity.x.shape) * 0.5 + 0.5
             tripping_y = math.zeros(self.velocity.y.shape)
             tripping = math.channel_stack((tripping_x, tripping_y), "vector")
         else: tripping = 1
-        self.velocity = self.velocity * (1 - self.inflow_velocity_mask.values) + self.inflow_velocity_mask.values * (self.inflow_velocity, 0) * tripping
+        # Inflow
+        if self.inflow_velocity > 1e-6: self.velocity = self.velocity * (1 - self.inflow_velocity_mask.values) + self.inflow_velocity_mask.values * (self.inflow_velocity, 0) * tripping
+        # Obstacle advection
         new_geometry = self.obstacle.geometry.rotated(-self.obstacle.angular_velocity * self.dt)
         new_geometry = new_geometry.shifted(self.obstacle.velocity * self.dt)
         self.obstacle = self.obstacle.copied_with(geometry=new_geometry, age=self.obstacle.age + self.dt)
+        additional_obs = []
+        for obstacle in self.additional_obs:
+            new_geometry = obstacle.geometry.rotated(-obstacle.angular_velocity * self.dt)
+            additional_obs += [obstacle.copied_with(geometry=new_geometry, age=obstacle.age + self.dt)]
+        self.additional_obs = additional_obs
 
     def make_incompressible(self):
         """
@@ -294,7 +315,7 @@ class TwoWayCouplingSimulation:
         """
         self.additional_obs = (Obstacle(Sphere(torch.as_tensor(xy), torch.as_tensor(radius))),)
 
-    def add_box(self, xy: torch.Tensor, width: torch.Tensor, height: torch.Tensor):
+    def add_box(self, xy: list, width: float, height: float, angle: float = PI / 2, angular_velocity: float = 0):
         """
         Add a box to the simulation at xy with width and height
 
@@ -306,8 +327,8 @@ class TwoWayCouplingSimulation:
         """
         lower = torch.as_tensor([xy[0] - width / 2, xy[1] - height / 2]).to(self.device)
         upper = torch.as_tensor([xy[0] + width / 2, xy[1] + height / 2]).to(self.device)
-        geometry = Box(lower, upper).shifted(torch.tensor(0).to(self.device))  # Trick to make sure this is treated as a tensor
-        self.additional_obs += [Obstacle(geometry), ]
+        geometry = Box(lower, upper).rotated(torch.tensor(angle).to(self.device))
+        self.additional_obs += [Obstacle(geometry, angular_velocity=torch.tensor(angular_velocity).to(self.device)), ]
 
     def export_data(self, path: str, case: int, step: int, ids: tuple = None, delete_previous=True):
         """
@@ -329,7 +350,7 @@ class TwoWayCouplingSimulation:
             return dvy_center - dvx_center
 
         export_funcs = dict(
-            pressure=lambda: self.pressure.values.native().detach().cpu().numpy(),
+            pressure=lambda: (self.pressure.values / self.dt).native().detach().cpu().numpy(),
             vx=lambda: self.velocity.x.data.native().detach().cpu().numpy(),
             vy=lambda: self.velocity.y.data.native().detach().cpu().numpy(),
             obs_xy=lambda: self.obstacle.geometry.center.native().detach().cpu().numpy(),
@@ -344,8 +365,12 @@ class TwoWayCouplingSimulation:
             fluid_torque_y=lambda: self.fluid_torque.native().detach().cpu().numpy()[1],
             fluid_torque=lambda: math.sum(self.fluid_torque).native().detach().cpu().numpy(),
             obs2_xy=lambda: [obs.geometry.center.native().detach().cpu().numpy() for obs in self.additional_obs],
+            obs2_ang=lambda: [obs.geometry.angle.native().detach().cpu().numpy() for obs in self.additional_obs],
+            obs2_ang_vel=lambda: [obs.angular_velocity.detach().cpu().numpy() for obs in self.additional_obs],
             cfl=lambda: (math.max(math.abs(self.velocity.values)) * self.dt).native().detach().cpu().numpy(),
             vorticity=lambda: calculate_vorticity().native().detach().cpu().numpy(),
+            # diffusion_u=lambda: self.diffusion_term_u,
+            # diffusion_v=lambda: self.diffusion_term_v,
         )
         if not ids: ids = list(export_funcs.keys())
         os.makedirs(path, exist_ok=True)
@@ -392,7 +417,7 @@ class TwoWayCouplingSimulation:
         accessible = self.domain.grid(active, extrapolation=math.extrapolation.ConstantExtrapolation(0))
         hard_bcs = field.stagger(accessible, math.maximum, self.domain.boundaries["scalar_extrapolation"], type=StaggeredGrid)
         # Make sure pressure inside obstacle is 0
-        pressure_with_bcs = self.pressure * (1 - accessible.at(self.pressure))
+        pressure_with_bcs = self.pressure * (1 - accessible.at(self.pressure)) / self.dt  # Solver's pressure is multiplied by dt
         pressure_with_normal = spatial_gradient(pressure_with_bcs, StaggeredGrid,) * pressure_with_bcs.dx
         pressure_surface = pressure_with_normal * hard_bcs
         # Force
@@ -417,15 +442,21 @@ class TwoWayCouplingSimulation:
         vy = math.tensor(self.velocity.y.values.native().detach().clone(), ("x", "y"))
         self.velocity = self.domain.staggered_grid(math.channel_stack((vx, vy), "vector"))
         obs_xy = self.obstacle.geometry.center.native().detach().clone()
-        obs_ang = self.obstacle.geometry.angle.native().detach().clone().view(1)
         obs_vx = math.tensor(self.obstacle.velocity.native().detach().clone())[0]
         obs_vy = math.tensor(self.obstacle.velocity.native().detach().clone())[1]
-        obs_ang_vel = self.obstacle.angular_velocity.native().detach().clone().view(1)
-        lower = torch.as_tensor([obs_xy[0] - self.ic["obs_w"] / 2, obs_xy[1] - self.ic["obs_h"] / 2]).to(self.device)
-        upper = torch.as_tensor([obs_xy[0] + self.ic["obs_w"] / 2, obs_xy[1] + self.ic["obs_h"] / 2]).to(self.device)
-        obstacle_geometry = Box(lower, upper).rotated(obs_ang[0])
+        if self.ic["obs_type"] == "box":
+            lower = torch.as_tensor([obs_xy[0] - self.ic["obs_w"] / 2, obs_xy[1] - self.ic["obs_h"] / 2]).to(self.device)
+            upper = torch.as_tensor([obs_xy[0] + self.ic["obs_w"] / 2, obs_xy[1] + self.ic["obs_h"] / 2]).to(self.device)
+            geometry = Box(lower, upper)
+        if self.ic["obs_type"] == "disc":
+            geometry = Sphere(obs_xy, torch.as_tensor(self.ic["obs_w"]).to(self.device))
+            obs_ang_vel = [0]
+        if not self.translation_only:
+            obs_ang = self.obstacle.geometry.angle.native().detach().clone().view(1)
+            obs_ang_vel = self.obstacle.angular_velocity.native().detach().clone().view(1)
+            geometry = geometry.rotated(obs_ang[0])
         self.obstacle = Obstacle(
-            obstacle_geometry,
+            geometry,
             velocity=math.tensor((obs_vx, obs_vy)),
             angular_velocity=math.tensor(obs_ang_vel[0], convert=True),
         )
