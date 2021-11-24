@@ -186,28 +186,33 @@ class TwoWayCouplingSimulation:
         # Sponge masks
         points_uv = self.velocity.points.unstack("staggered")
         # Sponge on the right boundary has a ramp in the u-direction
-        placeholder = [[], [], []]
+        placeholder = [[], [], [], []]
         # Create a linear ramp in the outward direction
         for points in points_uv:
+            # Left boundary
+            points_x = -(points.vector[0] - sponge_size[0])
+            sponge = (math.abs(points_x) + points_x) / 2  # Make negatives be 0
+            sponge = sponge / (sponge_size[0] + 1e-9)  # Normalize
+            placeholder[0] += [sponge]
             # Bottom boundary
             points_y = -(points.vector[1] - sponge_size[1])
             sponge = (math.abs(points_y) + points_y) / 2  # Make negatives be 0
             sponge = sponge / (sponge_size[1] + 1e-9)
-            placeholder[0] += [sponge]
+            placeholder[1] += [sponge]
             # Right boundary
             points_x = points.vector[0] - (domain_size[0] - sponge_size[2])
             sponge = (math.abs(points_x) + points_x) / 2  # Make negatives be 0
             sponge = sponge / (sponge_size[2] + 1e-9)  # Normalize
-            placeholder[1] += [sponge]
+            placeholder[2] += [sponge]
             # Top boundary
             points_y = points.vector[1] - (domain_size[1] - sponge_size[3])
             sponge = (math.abs(points_y) + points_y) / 2  # Make negatives be 0
             sponge = sponge / (sponge_size[3] + 1e-9)
-            placeholder[2] += [sponge]
+            placeholder[3] += [sponge]
         masks = [self.domain.staggered_grid(math.channel_stack(values, "vector")) for values in placeholder]
-        self.sponge_normal_mask = (masks[0] > 0) * (0, -1) + (masks[1] * (1, 0) > 0) + (masks[2] * (0, 1) > 0)
-        self.sponge_mask = (masks[0] > 0) * (0, 1) + (masks[1] * (1, 0) > 0) + (masks[2] * (0, 1) > 0)
-        self.sponge = (masks[0] * (0, 1) + masks[1] * (1, 0) + masks[2] * (0, 1)) * sponge_intensity * dt
+        self.sponge_normal_mask = (masks[0] > 0) * (-1, 0) + (masks[1] > 0) * (0, -1) + (masks[2] * (1, 0) > 0) + (masks[3] * (0, 1) > 0)
+        self.sponge_mask = (masks[0] > 0) * (1, 0) + (masks[1] > 0) * (0, 1) + (masks[2] * (1, 0) > 0) + (masks[3] * (0, 1) > 0)
+        self.sponge = (masks[0] * (1, 0) + masks[1] * (0, 1) + masks[2] * (1, 0) + masks[3] * (0, 1)) * sponge_intensity * dt
         # self.sponge = (self.sponge_normal_mask * self.sponge_normal_mask) * sponge_intensity * dt
 
     def advect(self, tripping_on: bool = False):

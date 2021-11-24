@@ -3,7 +3,7 @@ from typing import Dict
 from phi import math, struct
 
 from ._geom import Geometry, _fill_spatial_with_singleton
-from ..math import wrap
+from ..math import PI, wrap, tensor
 
 
 class Sphere(Geometry):
@@ -29,6 +29,10 @@ class Sphere(Geometry):
     @property
     def radius(self):
         return self._radius
+
+    @property
+    def angle(self):
+        return tensor(PI / 2, convert=True)
 
     @property
     def center(self):
@@ -69,9 +73,9 @@ class Sphere(Geometry):
 
     def __eq__(self, other):
         return isinstance(other, Sphere) \
-               and self._shape == other.shape \
-               and math.all(self._radius == other.radius) \
-               and math.all(self._center == other.center)
+            and self._shape == other.shape \
+            and math.all(self._radius == other.radius) \
+            and math.all(self._center == other.center)
 
     def __characteristics__(self) -> Dict[str, math.Tensor]:
         return {

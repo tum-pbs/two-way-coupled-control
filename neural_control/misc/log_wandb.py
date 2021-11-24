@@ -18,8 +18,12 @@ if __name__ == '__main__':
     wandb.init(project="neural_controller_translation_only" if inp["translation_only"] else "neural_controller", name=run_name)
     wandb.config.update(inp)
     for test in tests:
-        with open(run_path + f'/tests/{test}/metrics.json', 'r') as f:
-            metrics = json.load(f)
+        try:
+            with open(run_path + f'/tests/{test}/metrics.json', 'r') as f:
+                metrics = json.load(f)
+        except:
+            print(f"Did not find metrics for test {test}")
+            continue
         metrics_labels = list(metrics.keys())
         metrics_values = list(metrics.values())
         metrics_labels, metrics_values = zip(*sorted(zip(metrics_labels, metrics_values,), key=lambda metrics: isinstance(metrics[1], list)))

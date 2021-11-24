@@ -1,4 +1,5 @@
 from collections import defaultdict
+import json
 import torch
 import os
 import numpy as np
@@ -7,52 +8,59 @@ import numpy as np
 class Dataset(torch.utils.data.Dataset):
     'Characterizes a dataset for PyTorch'
 
-    def __init__(self, path: str, tvt_ratio: tuple, ref_vars=None):
+    def __init__(self, path: str, tvt_ratio: tuple, vars: list, ref_vars=None):
         """
         Initialize ids and labels
 
-        param: path: path to folder containing the data
-        param: tvt_ratio: tuple containing the ratio of training, validation and test data
+        Params:
+            path: path to folder containing the data
+            tvt_ratio: tuple containing the ratio of training, validation and test data
+            vars: list of variables to be loaded, e.g. ['obs_vx', 'obs_vy']
+            ref_vars: dictionary with reference variables for normalization
+
         """
         assert (np.sum(tvt_ratio) - 1.0) ** 2 < 1e-8
         self.mode = 'training'
         self.path = path + '/data/'
         self.past_window = 0
-        self.vars = [
-            'probes_vx',
-            'probes_vy',
-            'obs_vx',
-            'obs_vy',
-            'error_x',
-            'error_y',
-            'fluid_force_x',
-            'fluid_force_y',
-            'control_force_x',
-            'control_force_y']
+        self.vars = vars
         self.tvt_ratio = tvt_ratio
-        if ref_vars:
-            self.ref_vars = ref_vars
-            self.ref_vars_hash = dict(
-                probes_vx='velocity',
-                probes_vy='velocity',
-                obs_vx='velocity',
-                obs_vy='velocity',
-                error_x='length',
-                error_y='length',
-                fluid_force_x='force',
-                fluid_force_y='force',
-                control_force_x='force',
-                control_force_y='force'
-            )
-            # Make sure hash values are on ref_vars keys
-            hash_values = self.ref_vars_hash.values()
-            vars = list(self.ref_vars.keys())
-            assert not any([value not in vars for value in hash_values])
-        else:
-            self.ref_vars = defaultdict(lambda: 1)
-            self.ref_vars_hash = defaultdict(lambda: 1)
+        # Load data mean and stdd if file exists
+        if os.path.isfile(path + '/mean_stdd.json'):
+            with open(path + '/mean_stdd.json', 'r') as file:
+                data = json.load(file)
+            self.mean = data['mean']
+            self.stdd = data['stdd']
+        self.ref_vars = ref_vars if ref_vars else defaultdict(lambda: 1)
+        self.ref_vars_hash = dict(
+            probes_vx='velocity',
+            probes_vy='velocity',
+            obs_vx='velocity',
+            obs_vy='velocity',
+            error_x='length',
+            error_y='length',
+            fluid_force_x='force',
+            fluid_force_y='force',
+            control_force_x='force',
+            control_force_y='force'
+            # probes_vx='probes_vx',
+            # probes_vy='probes_vy',
+            # obs_vx='obs_vx',
+            # obs_vy='obs_vy',
+            # error_x='error_x',
+            # error_y='error_y',
+            # fluid_force_x='fluid_force_x',
+            # fluid_force_y='fluid_force_y',
+            # control_force_x='control_force_x',
+            # control_force_y='control_force_y',
+        )
         self.map_cases()
         self.update()
+
+        # # Make sure hash values are on ref_vars keys
+        # hash_values = self.ref_vars_hash.values()
+        # vars = list(self.ref_vars.keys())
+        # assert not any([value not in vars for value in hash_values])
 
     def __len__(self):
         """
@@ -60,6 +68,30 @@ class Dataset(torch.utils.data.Dataset):
 
         """
         return len(self.cases) * len(self.snapshots)
+
+    def load(self):
+        """
+        Load data from disk
+
+        """
+        x_past = []
+        for case in self.cases:
+            for snapshot in self.snapshots:
+                # var_indexes = defaultdict(list)
+                # i = 0
+                # Past inputs
+                x_past = ()  # dim = (past_window, features)
+                for j in reversed(range(self.past_window)):
+                    for var in self.vars:
+                        file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot-(j+1):05d}.npy'
+                        data = np.load(os.path.abspath(file)).reshape(-1,)
+                        factor = self.ref_vars[self.ref_vars_hash[var]]
+                        data /= factor
+                        x_past += (*data,)
+                        # var_indexes[var] += [torch.arange(i, data.size + i, dtype=torch.long).view(-1)]
+                        # i += data.size
+                x_past += ((torch.tensor(x_past, dtype=torch.float32).cuda(),))
+            print(case)
 
     def __getitem__(self, index, return_var_indexes: bool = False):
         """
@@ -78,7 +110,7 @@ class Dataset(torch.utils.data.Dataset):
         x_past = ()  # dim = (past_window, features)
         for j in reversed(range(self.past_window)):
             for var in self.vars:
-                file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot-(j+1):04d}.npy'
+                file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot-(j+1):05d}.npy'
                 data = np.load(os.path.abspath(file)).reshape(-1,)
                 factor = self.ref_vars[self.ref_vars_hash[var]]
                 data /= factor
@@ -89,7 +121,7 @@ class Dataset(torch.utils.data.Dataset):
         # Present inputs
         x_present = ()
         for var in self.vars[:-2]:
-            file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy'
+            file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy'
             data = np.load(os.path.abspath(file)).reshape(-1,)
             factor = self.ref_vars[self.ref_vars_hash[var]]
             data /= factor
@@ -99,7 +131,7 @@ class Dataset(torch.utils.data.Dataset):
         # Labels
         y = ()
         for var in self.vars[-2:]:
-            file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:04d}.npy'
+            file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy'
             data = np.load(os.path.abspath(file)).reshape(-1)
             factor = self.ref_vars[self.ref_vars_hash[var]]
             data /= factor
@@ -119,7 +151,7 @@ class Dataset(torch.utils.data.Dataset):
             if var not in directory:
                 raise AssertionError(f'Did not found {var} folder in data path')
         self.all_cases = tuple(set([int(file.split('case')[1][:4]) for file in os.listdir(f'{self.path}/{var}') if '.npy' in file]))
-        self.all_snapshots = tuple(set([int(file.split('_')[-1][:4]) for file in os.listdir(f'{self.path}/{var}') if '.npy' in file]))
+        self.all_snapshots = tuple(set([int(file.split('_')[-1][:5]) for file in os.listdir(f'{self.path}/{var}') if '.npy' in file]))
 
     def set_mode(self, mode: str):
         """
@@ -209,34 +241,72 @@ class Dataset(torch.utils.data.Dataset):
             destination: destination of case case
 
         """
-        file_x = f'{self.path}/reference_x/reference_x_case{case:04d}_0000.npy'
-        file_y = f'{self.path}/reference_y/reference_y_case{case:04d}_0000.npy'
+        file_x = f'{self.path}/reference_x/reference_x_case{case:04d}_00000.npy'
+        file_y = f'{self.path}/reference_y/reference_y_case{case:04d}_00000.npy'
         destination = (np.load(os.path.abspath(file_x)), np.load(os.path.abspath(file_y)))
         return destination
 
+    def compute_mean_stdd(self):
+        """
+        Compute mean and standard deviation of dataset
+
+        """
+        # Mean
+        mean = defaultdict(float)
+        for case in self.cases:
+            print(case)
+            for snapshot in self.all_snapshots:
+                for var in self.vars:
+                    data = np.load(f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy')
+                    mean[var] += data.mean()
+        n = (self.cases[-1] + 1) * (self.all_snapshots[-1] + 1)
+        for var in self.vars:
+            mean[var] = mean[var] / n
+        self.mean = mean
+        stdd = defaultdict(float)
+        # Standard deviation
+        for case in self.cases:
+            print(case)
+            for snapshot in self.all_snapshots:
+                for var in self.vars:
+                    data = np.load(f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy')
+                    stdd[var] += ((data - mean[var])**2) / n
+        for var in self.vars:
+            stdd[var] = np.sqrt(stdd[var].mean())
+        self.stdd = stdd
+        with open(self.path + '../mean_stdd.json', 'w') as f:
+            json.dump({'mean': dataset.mean, 'stdd': dataset.stdd, 'cases': dataset.cases, 'snapshots': dataset.snapshots}, f, indent='    ')
+
 
 if __name__ == '__main__':
-    dataset = Dataset('/home/ramos/work/PhiFlow2/PhiFlow/storage/supervised_dataset/', [0.6, 0.4, 0.])
+    dataset = Dataset('/home/ramos/phiflow/storage/dataset_simple_noinflow/', [.8, 0.2, 0.])
     dataset.set_mode('training')
     dataset.set_past_window_size(3)
     dataset.update()
-    params = {
-        'batch_size': 10,
-        'shuffle': False,
-        'num_workers': 2}
-    loader = torch.utils.data.DataLoader(dataset, **params)
-    device = torch.device("cuda")
-    import matplotlib.pyplot as plt
-    for x_local, y_local in loader:
-        y_local = y_local.numpy()
-        break
-    plt.plot(y_local[:, 0])
-    y_local = []
-    for i in range(10):
-        y_local += [dataset[i][1].numpy()]
-    y_local = np.array(y_local)
-    plt.plot(y_local[:, 0])
+    dataset.compute_mean_stdd()
+    # # Export mean and std in json file
+    # with open('/home/ramos/phiflow/storage/translation/supervised_dataset_simple/mean_std.json', 'w') as f:
+    #     json.dump({'mean': dataset.mean, 'stdd': dataset.stdd, 'cases': dataset.cases, 'snapshots': dataset.snapshots}, f, indent='    ')
+    # dataset.load()
+    print(dataset.mean)
+    print(dataset.stdd)
+    # params = {
+    #     'batch_size': 10,
+    #     'shuffle': False,
+    #     'num_workers': 2}
+    # loader = torch.utils.data.DataLoader(dataset, **params)
+    # device = torch.device("cuda")
+    # import matplotlib.pyplot as plt
+    # for x_local, y_local in loader:
+    #     y_local = y_local.numpy()
+    #     break
+    # plt.plot(y_local[:, 0])
+    # y_local = []
+    # for i in range(10):
+    #     y_local += [dataset[i][1].numpy()]
+    # y_local = np.array(y_local)
+    # plt.plot(y_local[:, 0])
 
-    dataset[30]
-    print(len(dataset))
-    plt.show(block=True)
+    # dataset[30]
+    # print(len(dataset))
+    # plt.show(block=True)

@@ -1,8 +1,8 @@
 from collections import defaultdict
 import os
+from Dataset import Dataset
 import numpy as np
 import json
-from Dataset import Dataset
 from InputsManager import InputsManager
 
 if __name__ == "__main__":
@@ -32,24 +32,24 @@ if __name__ == "__main__":
     #     export_dict[key]["i"] = [0]
     #     export_dict[key]["n_steps"] = 1000
 
-    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", ["supervised"])
-    dataset = Dataset(inp.supervised['dataset_path'], inp.supervised['tvt_ratio'])
+    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", ["supervised", "nn_vars"])
+    dataset = Dataset(inp.supervised['dataset_path'], inp.supervised['tvt_ratio'], inp.nn_vars)
     dataset.set_mode("validation")
     export_dict = defaultdict(dict)
     export_dict["dataset_path"] = inp.supervised['dataset_path']
     export_dict["tvt_ratio"] = inp.supervised['tvt_ratio']
     tests = dict(
         test1=dict(
-            help_i=lambda: 0,
-            initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_re3000/"
+            help_i=lambda: -1,
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_simple_noinflow/"
         ),
-        test2=dict(
-            help_i=lambda: 0,
-            initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_two_obstacles_re3000/"
-        ),
-        test3=dict(
-            help_i=lambda: 0,
-            initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_two_obstacles_re8000/")
+        # test2=dict(
+        #     help_i=lambda: 0,
+        #     initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_two_obstacles_re3000/"
+        # ),
+        # test3=dict(
+        #     help_i=lambda: 0,
+        #     initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_two_obstacles_re8000/")
     )
     # Export initial conditions
     for label, test_attrs in tests.items():
@@ -61,8 +61,8 @@ if __name__ == "__main__":
         for label, test_attrs in tests.items():
             export_dict[label][f"test{case}"] = dict(
                 positions=[destination],
-                i=[0],
-                n_steps=2001,
+                i=[-1],
+                n_steps=1001,
                 help_i=test_attrs["help_i"](),
                 angles=angles,
             )

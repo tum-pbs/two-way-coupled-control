@@ -16,13 +16,19 @@ def stack(streams_list, mode='h'):
     for input in streams_list:
         if stream is None:
 
-            if type(input) == str: stream = ffmpeg.input(input)
-            elif type(input) == ffmpeg.nodes.FilterableStream: stream = input
-            else: raise ValueError('streams_list does not contain streams or paths to videos')
+            if type(input) == str:
+                stream = ffmpeg.input(input)
+            elif type(input) == ffmpeg.nodes.FilterableStream:
+                stream = input
+            else:
+                raise ValueError(
+                    'streams_list does not contain streams or paths to videos')
 
         else:
-            if type(input) == str: temp_stream = ffmpeg.input(input)
-            elif type(input) == ffmpeg.nodes.FilterableStream: temp_stream = input
+            if type(input) == str:
+                temp_stream = ffmpeg.input(input)
+            elif type(input) == ffmpeg.nodes.FilterableStream:
+                temp_stream = input
 
             stream = ffmpeg.filter_([stream, temp_stream], '%sstack' % (mode))
     return stream
@@ -50,17 +56,26 @@ def add_text(stream, text, x, y, font_size, anchor='lt', font_path=''):
     :param font_path: path to font
     """
 
-    if anchor == 'lt': x_offset, y_offset = '', ''
-    elif anchor == 'lm': x_offset, y_offset = '', ' - text_h/2'
-    elif anchor == 'lb': x_offset, y_offset = '', ' - text_h'
+    if anchor == 'lt':
+        x_offset, y_offset = '', ''
+    elif anchor == 'lm':
+        x_offset, y_offset = '', ' - text_h/2'
+    elif anchor == 'lb':
+        x_offset, y_offset = '', ' - text_h'
 
-    elif anchor == 'mt': x_offset, y_offset = '- text_w/2', ''
-    elif anchor == 'mm': x_offset, y_offset = '- text_w/2', '-text_h/2'
-    elif anchor == 'mb': x_offset, y_offset = '- text_w/2', '-text_h'
+    elif anchor == 'mt':
+        x_offset, y_offset = '- text_w/2', ''
+    elif anchor == 'mm':
+        x_offset, y_offset = '- text_w/2', '-text_h/2'
+    elif anchor == 'mb':
+        x_offset, y_offset = '- text_w/2', '-text_h'
 
-    elif anchor == 'rt': x_offset, y_offset = '- text_w', ''
-    elif anchor == 'rm': x_offset, y_offset = '- text_w', '-text_h/2'
-    elif anchor == 'rb': x_offset, y_offset = '- text_w', '-text_h'
+    elif anchor == 'rt':
+        x_offset, y_offset = '- text_w', ''
+    elif anchor == 'rm':
+        x_offset, y_offset = '- text_w', '-text_h/2'
+    elif anchor == 'rb':
+        x_offset, y_offset = '- text_w', '-text_h'
 
     assert(isinstance(x, str) and isinstance(y, str))
     stream = stream.drawtext(
@@ -82,13 +97,13 @@ def overlay_image(stream, image, alpha):
     param: alpha: transparency of image
     """
 
-    if (isinstance(image, str)): image = ffmpeg.input(image)
-
+    if (isinstance(image, str)):
+        image = ffmpeg.input(image)
     image = image.colorchannelmixer(aa=alpha)
     return ffmpeg.overlay(stream, image)
 
 
-def images2video(path, images_name, extension, output_name='movie.mp4', framerate=24):
+def images2video(path, images_name, extension, output_name='movie.mp4', framerate=24, should_finish=False):
     """
     Convert sequence of images into a video
     :param: path: path to images with part of file names, e.g., path/to/image/cat
@@ -98,8 +113,8 @@ def images2video(path, images_name, extension, output_name='movie.mp4', framerat
     :param framerate: outputed video framerate
     """
     stream = ffmpeg.input(path + images_name + '*.' + extension, pattern_type='glob', framerate=framerate)
-
-    finish(stream, output_name, path)
+    if should_finish: finish(stream, output_name, path)
+    return stream
 
 
 def pad(stream, width, height, x, y, color="white"):

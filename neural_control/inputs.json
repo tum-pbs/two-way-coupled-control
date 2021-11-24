@@ -1,10 +1,10 @@
 {
     "translation_only": true,
     "architecture": "fc_only",
-    "past_window": 3,
+    "past_window": 2,
     "resume_training": false,
     "export_stride": 20,
-    "learning_rate_decay_half_life": 5000,
+    "learning_rate_decay_half_life": 10000,
     "max_acc": 0.25,
     "max_ang_acc": 0.025,
     "device": "GPU",
@@ -12,6 +12,14 @@
     "probes_n_columns": 3,
     "probes_offset": 4,
     "probes_size": 4,
+    "nn_vars": [
+        "obs_vx",
+        "obs_vy",
+        "error_x",
+        "error_y",
+        "control_force_x",
+        "control_force_y"
+    ],
     "online": {
         "simulation_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
         "destinations_zone_growrate": 0.33,
@@ -39,8 +47,8 @@
     "supervised": {
         "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
         "learning_rate": 0.004,
-        "n_iterations": 800001,
-        "dataset_path": "/home/ramos/phiflow/storage/translation/supervised_dataset_simple/",
+        "n_iterations": 320001,
+        "dataset_path": "/home/ramos/phiflow/storage/dataset_simple_noinflow/",
         "dataset_n_steps": 1000,
         "model_export_stride": 8000,
         "n_simulations": 100,
@@ -50,12 +58,12 @@
             20
         ],
         "tvt_ratio": [
-            0.1,
-            0.1,
-            0.8
+            0.8,
+            0.2,
+            0.0
         ],
         "dataloader_params": {
-            "batch_size": 50,
+            "batch_size": 15,
             "shuffle": true,
             "num_workers": 8
         }
@@ -85,10 +93,19 @@
         ],
         "sponge_intensity": 0.01,
         "sponge_size": [
-            0,
-            0,
-            0,
-            0
+            3,
+            3,
+            3,
+            3
+        ]
+    },
+    "controller": {
+        "coeffs_path": [
+            "/home/ramos/phiflow/neural_control/controller_design/controller_coefficients_simple.json"
+        ],
+        "type": "ls",
+        "clamp_values": [
+            20
         ]
     },
     "export_vars": [

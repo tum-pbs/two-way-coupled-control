@@ -16,6 +16,7 @@ from TwoWayCouplingSimulation import *
 from InputsManager import InputsManager
 import time
 from Probes import Probes
+import json
 
 
 class Generator(TwoWayCouplingSimulation):
@@ -59,7 +60,8 @@ class Generator(TwoWayCouplingSimulation):
         seed = 0
         while True:
             # for i in range(len(destinations)):
-            knots_y_vy = [1] * 4
+            # knots_y_vy = [1] * 4
+            knots_y_vy = [4] * 3
             knots_y_vy[0] = 0
             knots_y_vy[-1] = 0
             knots_y_vx = knots_y_vy
@@ -97,6 +99,7 @@ class Generator(TwoWayCouplingSimulation):
             plt.figure(2)
             plt.plot(velocity[:, 0])
             plt.plot(velocity[:, 1])
+            plt.title('Velocity')
             print(i)
             i += 1
             if i >= len(destinations):
@@ -194,8 +197,6 @@ if __name__ == "__main__":
         "obs_xy",
         "obs_vx",
         "obs_vy",
-        "obs_ang",
-        "obs_ang_vel",
         "control_force_x",
         "control_force_y",
         "fluid_force_x",
@@ -206,16 +207,23 @@ if __name__ == "__main__":
         "reference_x",
         "reference_y",
         "error_x",
-        "error_y"
+        "error_y",
+        # "obs_ang",
+        # "obs_ang_vel",
     )
     inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", ["supervised"])
     inp.add_values(inp.supervised["initial_conditions_path"] + "inputs.json", ["probes", "simulation"])
     generator = Generator(inp.device)
-    generator.set_initial_conditions(inp.simulation['obs_width'], inp.simulation['obs_height'], inp.supervised["initial_conditions_path"])
+    generator.set_initial_conditions(
+        inp.simulation['obs_type'],
+        inp.simulation['obs_width'],
+        inp.simulation['obs_height'],
+        inp.supervised["initial_conditions_path"]
+    )
     # Generate trajectories
-    destinations = generator.create_destinations(50, inp.simulation['domain_size'], inp.supervised['destinations_margins'])
+    destinations = generator.create_destinations(inp.supervised["n_simulations"], inp.simulation['domain_size'], inp.supervised['destinations_margins'])
     velocities = generator.create_trajectories(
-        int(inp.supervised['dataset_n_steps'] / 2 + 1),
+        int(inp.supervised['dataset_n_steps']/2 + 1),
         destinations,
         (inp.simulation['obs_xy'][0], inp.simulation['obs_xy'][1]),
         inp.simulation['dt'])
@@ -238,9 +246,10 @@ if __name__ == "__main__":
             inp.simulation['dt'],
             inp.simulation['obs_mass'],
             inp.simulation['obs_inertia'],
-            inp.simulation['inflow_velocity'],
+            inp.simulation['reference_velocity'],
             inp.simulation['sponge_intensity'],
-            inp.simulation['sponge_size'])
+            inp.simulation['sponge_size'],
+            inp.simulation['inflow_on'])
         for j in range(inp.supervised['dataset_n_steps'] - 1):
             generator.set_obstacle_velocity(velocity_curve[j])
             generator.advect()
@@ -248,7 +257,8 @@ if __name__ == "__main__":
             generator.calculate_fluid_forces()
             (generator.control_force_x, generator.control_force_y) = -generator.fluid_force + inp.simulation['obs_mass'] * (velocity_curve[j + 1] - velocity_curve[j]) / inp.simulation['dt']
             # Probes
-            probes.update_transform(generator.obstacle.geometry.center.numpy(), generator.obstacle.geometry.angle.numpy() - PI / 2)
+            angle = 0 if inp.translation_only else generator.obstacle.geometry.angle.numpy() - PI / 2
+            probes.update_transform(generator.obstacle.geometry.center.numpy(), angle)
             probes_points = probes.get_points_as_tensor()
             generator.probes_vx = generator.velocity.x.sample_at(probes_points).native()
             generator.probes_vy = generator.velocity.y.sample_at(probes_points).native()
