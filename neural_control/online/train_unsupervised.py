@@ -129,10 +129,8 @@ if __name__ == "__main__":
         # Variables initialization
         nn_inputs_past = torch.zeros((inp.past_window, 1, inp.n_past_features)).to(device)
         if inp.translation_only:
-            loss_inputs = torch.zeros((inp.online['n_before_backprop'], 1, 6)).to(device)
             control_effort = torch.zeros(2).to(device)
         else:
-            loss_inputs = torch.zeros((inp.online['n_before_backprop'], 1, 9)).to(device)
             # loss_inputs = torch.zeros((inp.online['n_before_backprop'], 1, 10)).to(device)  # TODO
             control_effort = torch.zeros(3).to(device)
             # control_effort = torch.zeros(4).to(device)  # TODO
@@ -156,25 +154,28 @@ if __name__ == "__main__":
             # probes.update_transform(sim.obstacle.geometry.center.numpy(), -(sim.obstacle.geometry.angle.numpy() - math.PI / 2.0)) # TODO
             sim.calculate_fluid_forces()
             # Control
-            nn_inputs_present, loss_inputs_present = extract_inputs(inp.nn_vars, sim, probes, objective_xy[:, case], objective_ang[case], ref_vars, inp.translation_only)
+            nn_inputs_present, loss_inputs = extract_inputs(inp.nn_vars, sim, probes, objective_xy[:, case], objective_ang[case], ref_vars, inp.translation_only)
             if i < inp.past_window + 1: last_backprop = i  # Wait to backprop until past inputs are cached
             else:
                 control_effort = model(nn_inputs_present.view(1, -1), nn_inputs_past.view(1, -1))
-                control_effort = torch.clamp(control_effort, -1., 1.)
+                control_effort = torch.clamp(control_effort, -2., 2.)
+                # control_effort = torch.tanh(control_effort)  # TODO
                 control_force = control_effort[0, :2]
+                loss_inputs['d_control_force'] = control_force - last_control_force
+                loss_inputs['control_force'] = control_force
+                last_control_force = control_force
                 if inp.translation_only:
                     control_force_global = control_force
-                    delta_control_effort = control_force - last_control_force
-                    last_control_force = control_force
                 else:
                     angle_tensor = -(sim.obstacle.geometry.angle - math.PI / 2.0).native()
                     control_force_global = rotate(control_force, angle_tensor)  # Control force at global reference of frame (used for visualization only)
                     # Additional inputs for loss
-                    delta_control_effort = control_force - last_control_force
-                    last_control_force = control_force
                     control_torque = control_effort[0, -1:]
-                    delta_control_effort = torch.cat([delta_control_effort, control_torque - last_control_torque])
+                    d_control_torque = control_torque - last_control_torque
                     last_control_torque = control_torque
+                    loss_inputs['d_control_torque'] = d_control_torque
+                    loss_inputs['control_torque'] = control_torque
+
                 # # Force 2 TODO
                 # if not inp.translation_only:
                 #     control_force2 = control_effort[0, 2:] * torch.as_tensor((0, 1)).cuda()  # TODO
@@ -182,7 +183,7 @@ if __name__ == "__main__":
                 #     delta_control_effort = torch.cat([delta_control_effort, control_force2 - last_control_force2])
 
                 # Save quantities necessary for loss
-                loss_inputs = update_inputs(loss_inputs, loss_inputs_present, delta_control_effort)
+                # loss_inputs = update_inputs(loss_inputs, loss_inputs_present, delta_control_effort)
                 loss, loss_terms = calculate_loss(loss_inputs, inp.online['hyperparams'], inp.translation_only)
                 if (i - last_backprop == inp.online['n_before_backprop']):
                     # if torch.rand(1) < inp.online["simulation_dropout"]:
@@ -203,19 +204,19 @@ if __name__ == "__main__":
                         lr_scheduler.step()  # Decay learning rate after backprop
                     optimizer.zero_grad()
                     # Reset graph
-                    control_effort = control_effort.detach().clone()
-                    last_control_force = last_control_force.detach().clone()
-                    # last_control_force2 = last_control_force2.detach().clone()
-                    last_control_torque = last_control_torque.detach().clone()
-                    loss_inputs_present = loss_inputs_present.detach().clone()
-                    loss_inputs = loss_inputs.detach().clone()
-                    nn_inputs_present = nn_inputs_present.detach().clone()
-                    nn_inputs_past = nn_inputs_past.detach().clone()
-                    control_force = control_force.detach().clone()
-                    # control_force2 = control_force.detach().clone()
-                    control_force_global = control_force_global.detach().clone()
-                    control_force_global2 = control_force_global.detach().clone()
-                    control_torque = control_torque.detach().clone()
+                    control_force = None
+                    loss_inputs = {key: value.detach() for key, value in loss_inputs.items()}
+                    control_effort = control_effort.detach()
+                    control_torque = control_torque.detach()
+                    last_control_force = last_control_force.detach()
+                    last_control_torque = last_control_torque.detach()
+                    nn_inputs_present = nn_inputs_present.detach()
+                    nn_inputs_past = nn_inputs_past.detach()
+                    control_force_global = control_force_global.detach()
+                    # last_control_force2 = last_control_force2.detach()
+                    # loss_inputs_present = loss_inputs_present.detach()
+                    # control_force2 = control_force.detach()
+                    # control_force_global2 = control_force_global.detach()
                     sim.detach_variables()
                     last_backprop = i
             nn_inputs_past = update_inputs(nn_inputs_past, nn_inputs_present, control_effort)
@@ -226,19 +227,20 @@ if __name__ == "__main__":
             sim.probes_vx = sim.velocity.x.sample_at(probes_points).native().detach()
             sim.probes_vy = sim.velocity.y.sample_at(probes_points).native().detach()
             sim.probes_points = probes_points.native().detach()
-            sim.loss = loss.detach().clone()
+            sim.loss = loss.detach()
             for key, value in loss_terms.items():
-                setattr(sim, f"loss_{key}", value.detach().clone())
-            sim.reference_x = objective_xy[0, case].detach().clone()
-            sim.reference_y = objective_xy[1, case].detach().clone()
-            sim.control_force_x, sim.control_force_y = control_force_global.detach().clone() * ref_vars['force']
-            sim.error_x, sim.error_y = loss_inputs_present[0, :2].detach().clone() * ref_vars['length']
+                setattr(sim, f"loss_{key}", value.detach())
+            sim.reference_x = objective_xy[0, case].detach()
+            sim.reference_y = objective_xy[1, case].detach()
+            sim.control_force_x, sim.control_force_y = control_force_global.detach() * ref_vars['force']
+            sim.error_x = loss_inputs['error_x'].detach() * ref_vars['length']
+            sim.error_y = loss_inputs['error_y'].detach() * ref_vars['length']
             if not inp.translation_only:
                 sim.error_x, sim.error_y = rotate([sim.error_x, sim.error_y], angle_tensor)
-                sim.reference_angle = objective_ang[case].detach().clone()
-                sim.error_ang = loss_inputs_present[0, 4].detach().clone() * ref_vars['angle']
-                sim.control_torque = control_torque.detach().clone() * ref_vars['torque']
-                # sim.control_force_x2, sim.control_force_y2 = control_force_global2.detach().clone() * ref_vars['force']  # TODO
+                sim.reference_angle = objective_ang[case].detach()
+                sim.error_ang = loss_inputs['error_ang'].detach() * ref_vars['angle']
+                sim.control_torque = control_torque.detach() * ref_vars['torque']
+                # sim.control_force_x2, sim.control_force_y2 = control_force_global2.detach() * ref_vars['force']  # TODO
             sim.export_data(inp.export_path, case, int(i / inp.export_stride), inp.export_vars, (case == 0 and i == 0))
             # Calculate how much time is left
             current_time = time()

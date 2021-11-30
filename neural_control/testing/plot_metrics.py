@@ -67,7 +67,7 @@ def plot_error(mean: np.array, sigma: np.array, color: str, name: str, fig: go.F
         )
     )
     # fig.show()
-    # fig.update_yaxes(type="log")
+    fig.update_yaxes(type="log")
     return fig
 
 
@@ -134,8 +134,8 @@ if __name__ == '__main__':
             # Plot general error
             color = next(colors)
             plot_error(
-                np.array(metrics["general_error_xy"]),
-                np.array(metrics["general_error_xy_stdd"]),
+                np.array(metrics["general_error_xy"]).flatten(),
+                np.array(metrics["general_error_xy_stdd"]).flatten(),
                 color,
                 run_path.split("/")[-2],
                 fig[0])

@@ -41,19 +41,30 @@ if __name__ == "__main__":
     tests = dict(
         test1=dict(
             help_i=lambda: -1,
-            initial_conditions_path="/home/ramos/phiflow/storage/baseline_simple_noinflow/"
+            initial_conditions_path=lambda: "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
+            smoke=dict(
+                on=lambda: False,
+            )
         ),
-        # test2=dict(
-        #     help_i=lambda: 0,
-        #     initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_two_obstacles_re3000/"
-        # ),
+        test2=dict(
+            help_i=lambda: -1,
+            initial_conditions_path=lambda: "/home/ramos/phiflow/storage/baseline_simple_noinflow_fine/",
+            positions=lambda: [(randomGenerator.rand(2) * 60 + (130 - 60) / 2).tolist()],
+            smoke=dict(
+                on=lambda: True,
+                xy=lambda: (float(randomGenerator.rand(1) * 0.2 + 0.4), 0.125),
+                inflow=lambda: 0.01,
+                radius=lambda: 5,
+                buoyancy=lambda: (0, 0.01),
+            )
+        ),
         # test3=dict(
         #     help_i=lambda: 0,
         #     initial_conditions_path="/home/ramos/phiflow/storage/baseline_175x110_two_obstacles_re8000/")
     )
     # Export initial conditions
     for label, test_attrs in tests.items():
-        export_dict[label]["initial_conditions_path"] = test_attrs["initial_conditions_path"]
+        export_dict[label]["initial_conditions_path"] = test_attrs["initial_conditions_path"]()
     # Loop through validation cases and export data necessary for test simulations
     for case in range(dataset.n_cases):
         destination = np.array(dataset.get_destination(case)).tolist()
@@ -63,9 +74,15 @@ if __name__ == "__main__":
                 positions=[destination],
                 i=[-1],
                 n_steps=1001,
-                help_i=test_attrs["help_i"](),
                 angles=angles,
             )
+            for key, value in test_attrs.items():
+                if key == "smoke":
+                    export_dict[label][f"test{case}"]["smoke"] = {}
+                    for smoke_key, smoke_value in value.items():
+                        export_dict[label][f"test{case}"][key][smoke_key] = smoke_value()
+                else:
+                    export_dict[label][f"test{case}"][key] = value()
     with open(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json", "w") as f:
         json.dump(export_dict, f, indent="    ")
     print("Done")

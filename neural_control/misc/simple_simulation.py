@@ -11,7 +11,7 @@ if __name__ == "__main__":
         "cfl",
         "fluid_force_x",
         "fluid_force_y",
-        # "obs_xy",
+        "obs_xy",
         # "obs_vx",
         # "obs2_xy",
         # "obs2_ang",

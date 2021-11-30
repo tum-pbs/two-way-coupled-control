@@ -103,19 +103,17 @@ def extract_inputs(
     # Transfer values of inputs to tensor
     model_inputs = torch.cat(list(inputs.values())).view(1, 1, -1)
     # Loss inputs
-    loss_inputs = [
-        inputs["error_x"],
-        inputs["error_y"],
-        inputs["obs_vx"],
-        inputs["obs_vy"]
-    ]
+    loss_inputs = dict(
+        error_x=inputs["error_x"],
+        error_y=inputs["error_y"],
+        obs_vx=inputs["obs_vx"],
+        obs_vy=inputs["obs_vy"]
+    )
     if not translation_only:
-        loss_inputs += [
-            inputs["error_angle"],
-            # inputs["fluid_torque"],
-            inputs["ang_velocity"]
-        ]
-    loss_inputs = torch.cat(loss_inputs).view(1, -1)
+        loss_inputs['error_angle'] = inputs["error_angle"]
+        # inputs["fluid_torque"],
+        loss_inputs['ang_velocity'] = inputs["ang_velocity"]
+    # loss_inputs = torch.cat(loss_inputs).view(1, -1)
     # # Gather inputs
     # probes_velocity = torch.stack([
     #     sim.velocity.x.sample_at(probes.get_points_as_tensor()).native(),
@@ -202,34 +200,45 @@ def calculate_loss(loss_inputs: math.Tensor, hyperparams: dict, translation_only
         ang_vel_term: loss term that accounts for obstacle angular velocity
 
     """
-    x_error = loss_inputs[:, :, 0:2]
-    obs_velocity = loss_inputs[:, :, 2:4]
-    delta_force = loss_inputs[:, :, 4:6]  # TODO CHECK THIS
-    spatial_term = hyperparams['spatial'] * torch.sum(x_error**2)
+    error_xy = torch.cat((loss_inputs['error_x'], loss_inputs['error_y']))
+    obs_velocity = torch.cat((loss_inputs['obs_vx'], loss_inputs['obs_vy']))
+    delta_force = loss_inputs['d_control_force']
+    force = loss_inputs['control_force']
+    spatial_term = hyperparams['spatial'] * torch.sum(error_xy**2)
+    dforce_term = hyperparams['delta_force'] * torch.sum(delta_force**2)
+    force_term = hyperparams['force'] * torch.sum(force**2)
     # Other terms are pronounced only when spatial or angular error are low
-    velocity_term = hyperparams['velocity'] * torch.sum(obs_velocity**2 / (x_error**2 * hyperparams['proximity'] + 1))
+    velocity_term = hyperparams['velocity'] * torch.sum(obs_velocity**2 / (error_xy**2 * hyperparams['proximity'] + 1))
     if not translation_only:
-        ang_error = loss_inputs[:, :, 4:5]
-        angular_velocity = loss_inputs[:, :, 5:6]
-        delta_force = loss_inputs[:, :, 6:8]
+        ang_error = loss_inputs['ang_error']
+        angular_velocity = loss_inputs['ang_velocity']
         # delta_force2 = loss_inputs[:, :, 8:10]  # TODO
-        delta_torque = loss_inputs[:, :, 8:9]
-        ang_term = hyperparams['angle'] * torch.sum(ang_error**2 / (torch.sum(x_error**2, 2, keepdim=True) * hyperparams['proximity'] + 1))
+        delta_torque = loss_inputs['d_control_torque']
+        ang_term = hyperparams['angle'] * torch.sum(ang_error**2 / (torch.sum(error_xy**2, 2, keepdim=True) * hyperparams['proximity'] + 1))
         ang_vel_term = hyperparams['ang_velocity'] * torch.sum(angular_velocity**2 / (ang_error**2 * hyperparams['proximity'] + 1))
         # Avoid abrupt changes
-        torque_term = hyperparams['delta_torque'] * torch.sum(delta_torque**2)
+        dtorque_term = hyperparams['delta_torque'] * torch.sum(delta_torque**2)
         # force2_term = hyperparams['delta_force'] * torch.sum(delta_force2**2)  # TODO
     else:
-        ang_term = ang_vel_term = torque_term = torch.tensor(0)
-    force_term = hyperparams['delta_force'] * torch.sum(delta_force**2)
-    loss = spatial_term + velocity_term + ang_term + ang_vel_term + force_term + torque_term  # + force2_term
+        ang_term = ang_vel_term = dtorque_term = torch.tensor(0)
+
+    loss = (
+        spatial_term +
+        velocity_term +
+        ang_term +
+        ang_vel_term +
+        dtorque_term +
+        dforce_term +
+        force_term
+        # + force2_term)
+    )
     loss_terms = dict(
         spatial=spatial_term,
         velocity=velocity_term,
         ang=ang_term,
         ang_vel=ang_vel_term,
-        force=force_term,
-        torque=torque_term
+        # force=force_term,
+        # torque=torque_term
         # force2=force2_term  # TODO
     )
     return loss, loss_terms

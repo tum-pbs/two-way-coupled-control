@@ -24,7 +24,7 @@ if __name__ == "__main__":
         inp = InputsManager(os.path.abspath(run_path + "/inputs.json"), exclude=["simulation"])
         # Set model type
         if "online" in inp.__dict__.keys(): model_type = "online"
-        elif "supervised" in inp.__dict__.keys(): model_type = "online"
+        elif "supervised" in inp.__dict__.keys(): model_type = "supervised"
         elif "rl" in inp.__dict__.keys(): model_type = "rl"
         else: raise ValueError("Unknown model type")
         # Set device
@@ -46,7 +46,8 @@ if __name__ == "__main__":
             export_path = f"{run_path}/tests/{test_label}_{model_id}/"
             prepare_export_folder(export_path, 0)
             print(f"\n Data will be saved on {export_path} \n")
-            inp.add_values(test["initial_conditions_path"] + "/inputs.json", ["simulation"])  # Load parameters of initial conditions
+            inp.delete_attributes('export_stride')
+            inp.add_values(test["initial_conditions_path"] + "/inputs.json", ["simulation", "export_stride"])  # Load parameters of initial conditions
             # Create list of scalar variables that will be exported every step
             export_vars_scalar = list(inp.export_vars)
             for entry in list(export_vars_scalar):
@@ -113,6 +114,7 @@ if __name__ == "__main__":
                     # control_force_global2 = torch.zeros(2).to(device)  # TODO
                     control_torque = torch.zeros(1).to(device)
                     # Initialize simulation
+                    smoke_attrs = test_attrs['smoke']
                     sim.setup_world(
                         inp.simulation["re"],
                         inp.simulation['domain_size'],
@@ -122,7 +124,12 @@ if __name__ == "__main__":
                         inp.simulation['reference_velocity'],
                         inp.simulation['sponge_intensity'],
                         inp.simulation['sponge_size'],
-                        inp.simulation['inflow_on'])
+                        inp.simulation['inflow_on'],
+                        smoke_attrs['buoyancy'] if smoke_attrs['on'] else (0, 0))
+                    if smoke_attrs['on']:
+                        for xy in smoke_attrs['xy']:
+                            sim.add_smoke(xy, smoke_attrs['radius'], smoke_attrs['inflow'])
+                        if "smoke" not in inp.export_vars: inp.export_vars.append("smoke")
                     for i in range(test_attrs['n_steps']):
                         for x_objective_, ang_objective_, objective_i in zip(test_attrs['positions'], test_attrs['angles'], test_attrs['i']):
                             # Check if objective changed
@@ -137,7 +144,7 @@ if __name__ == "__main__":
                         sim.calculate_fluid_forces()
                         # Control
                         if i % sampling_stride == 0:
-                            nn_inputs_present, loss_inputs_present = extract_inputs(inp.nn_vars, sim, probes, x_objective, ang_objective, ref_vars, inp.translation_only)
+                            nn_inputs_present, loss_inputs = extract_inputs(inp.nn_vars, sim, probes, x_objective, ang_objective, ref_vars, inp.translation_only)
                             if model_type == "rl":
                                 rl_inp.add_snapshot(nn_inputs_present.view(1, -1))
                                 # if i % inp.rl['n_snapshots_per_window'] == 0:
@@ -178,16 +185,17 @@ if __name__ == "__main__":
                         sim.probes_vx = sim.velocity.x.sample_at(probes_points).native().detach()
                         sim.probes_vy = sim.velocity.y.sample_at(probes_points).native().detach()
                         sim.probes_points = probes_points.native().detach()
-                        sim.reference_x = x_objective[0].detach().clone()
-                        sim.reference_y = x_objective[1].detach().clone()
-                        sim.control_force_x, sim.control_force_y = control_force_global.detach().clone() * ref_vars['force']
-                        sim.error_x, sim.error_y = loss_inputs_present[0, :2].detach().clone() * ref_vars['length']
+                        sim.reference_x = x_objective[0].detach()
+                        sim.reference_y = x_objective[1].detach()
+                        sim.control_force_x, sim.control_force_y = control_force_global.detach() * ref_vars['force']
+                        sim.error_x = loss_inputs['error_x'].detach() * ref_vars['length']
+                        sim.error_y = loss_inputs['error_y'].detach() * ref_vars['length']
                         if not inp.translation_only:
                             sim.error_x, sim.error_y = rotate(torch.tensor([sim.error_x, sim.error_y]), angle_tensor)
-                            sim.reference_angle = ang_objective.detach().clone()
-                            sim.error_ang = loss_inputs_present[0, 4].detach().clone() * ref_vars['angle']
-                            # sim.control_force_x2, sim.control_force_y2 = control_force_global2.detach().clone() * ref_vars['force']  # TODO
-                            sim.control_torque = control_torque.detach().clone() * ref_vars['torque']
+                            sim.reference_angle = ang_objective.detach()
+                            sim.error_ang = loss_inputs['error_ang'].detach() * ref_vars['angle']
+                            # sim.control_force_x2, sim.control_force_y2 = control_force_global2.detach() * ref_vars['force']  # TODO
+                            sim.control_torque = control_torque.detach() * ref_vars['torque']
                         # If not on stride export just scalar values
                         if (i % inp.export_stride != 0):  # or (i < inp.past_window + 1):
                             export_vars = export_vars_scalar

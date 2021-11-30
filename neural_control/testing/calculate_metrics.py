@@ -145,16 +145,8 @@ if __name__ == '__main__':
             all_files = [file.split("error_x")[1] for file in all_files]  # Remove prefix
             cases = natsorted(tuple(set([file.split("case")[1][:4] for file in all_files])))
             snapshots = natsorted(tuple(set((file.split("_")[-1][:5] for file in all_files))))
-            norm_vars = dict(
-                error_x=inp.simulation['obs_width'],
-                error_y=inp.simulation['obs_width'],
-                control_force_x=inp.simulation['obs_mass'] * inp.max_acc,
-                control_force_y=inp.simulation['obs_mass'] * inp.max_acc,
-                error_ang=np.pi,
-                control_torque=inp.simulation['obs_inertia'] * inp.max_ang_acc,
-            )
             # Loop through metrics
-            export_dict = norm_vars
+            export_dict = {}
             for metric_name, attrs in metrics.items():
                 vars = attrs['vars']
                 func = attrs['func']
@@ -170,7 +162,7 @@ if __name__ == '__main__':
                         values_all[var] += [values]
                     values_all[var] = np.array(values_all[var])
                 # Calculate metric
-                metrics_values, metrics_labels = func(*values_all.values(), normalizing_factor=norm_vars[var])
+                metrics_values, metrics_labels = func(*values_all.values(), )
                 # Logging
                 for metric_values, metric_label in zip(metrics_values, metrics_labels):
                     export_dict[f"{metric_name}{metric_label}"] = metric_values.tolist()  # Local logging

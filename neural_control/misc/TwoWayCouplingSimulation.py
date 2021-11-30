@@ -121,7 +121,19 @@ class TwoWayCouplingSimulation:
             self.ic["obs_ang"] = math.tensor((torch.as_tensor(obs_ang),), convert=True) + PI / 2
             return 0
 
-    def setup_world(self, re: float, domain_size: list, dt: float, obs_mass: float, obs_inertia: float, reference_velocity: float, sponge_intensity: float, sponge_size: list, inflow_on: bool = True):
+    def setup_world(
+        self,
+        re: float,
+        domain_size: list,
+        dt: float,
+        obs_mass: float,
+        obs_inertia: float,
+        reference_velocity: float,
+        sponge_intensity: float,
+        sponge_size: list,
+        inflow_on: bool = True,
+        buoyancy: float = (0, 0)
+    ):
         """
         Setup world for simulation with a box on it
 
@@ -134,6 +146,8 @@ class TwoWayCouplingSimulation:
             reference_velocity: reference velocity for calculating viscosity
             sponge_intensity: intensity of sponge layer
             sponge_size: size of sponge layer
+            inflow_on: whether inflow is on or off
+            buoyancy: tuple with buoyancy coefficients
 
         """
         self.dt = dt
@@ -183,6 +197,9 @@ class TwoWayCouplingSimulation:
         self.inflow_velocity = reference_velocity * inflow_on
         self.re = re
         self.viscosity = reference_velocity * self.ic["obs_w"] / re
+        self.buoyancy = buoyancy
+        self.smoke_inflow = ()
+        self.smoke = ()
         # Sponge masks
         points_uv = self.velocity.points.unstack("staggered")
         # Sponge on the right boundary has a ramp in the u-direction
@@ -212,7 +229,7 @@ class TwoWayCouplingSimulation:
         masks = [self.domain.staggered_grid(math.channel_stack(values, "vector")) for values in placeholder]
         self.sponge_normal_mask = (masks[0] > 0) * (-1, 0) + (masks[1] > 0) * (0, -1) + (masks[2] * (1, 0) > 0) + (masks[3] * (0, 1) > 0)
         self.sponge_mask = (masks[0] > 0) * (1, 0) + (masks[1] > 0) * (0, 1) + (masks[2] * (1, 0) > 0) + (masks[3] * (0, 1) > 0)
-        self.sponge = (masks[0] * (1, 0) + masks[1] * (0, 1) + masks[2] * (1, 0) + masks[3] * (0, 1)) * sponge_intensity * dt
+        self.sponge = (masks[0] * (1, 0) + masks[1] * (0, 1) + masks[2] * (1, 0) + masks[3] * (0, 1)) * sponge_intensity  # * dt
         # self.sponge = (self.sponge_normal_mask * self.sponge_normal_mask) * sponge_intensity * dt
 
     def advect(self, tripping_on: bool = False):
@@ -223,25 +240,34 @@ class TwoWayCouplingSimulation:
             tripping_on: if True, then inflow is multiplied by mask with random values between 0.5 and 1
 
         """
-        def rhs(velocity):
-            u = velocity.x
-            v = velocity.y
-            du_dx, du_dy = spatial_gradient(u, CenteredGrid).unstack("vector")
-            dv_dx, dv_dy = spatial_gradient(v, CenteredGrid).unstack("vector")
-            v_at_u = (v.values[:, 1:] + v.values[:, :-1]) / 2.  # v at center node
-            v_at_u = (v_at_u[1:, :] + v_at_u[:-1, :]) / 2.  # Values at u nodes without boundaries
-            bc_v_left = math.zeros(x=1, y=v_at_u.shape[1])  # BC for v at left boundary
-            bc_v_right = v_at_u[-2:-1, :]  # Neumman BC for v at right boundary
-            v_at_u = math.concat((bc_v_left, v_at_u, bc_v_right), 'x')  # v at u nodes
-            u_at_v = (u.values[1:, :] + u.values[:-1, :]) / 2.  # u at center nodes
-            u_at_v = (u_at_v[:, 1:] + u_at_v[:, :-1]) / 2.
-            bc_u_top = u_at_v[:, -2:-1]
-            bc_u_bottom = u_at_v[:, 0:1]
-            u_at_v = math.concat((bc_u_bottom, u_at_v, bc_u_top), 'y')
-            result = math.channel_stack([
-                -1. * (u.values * du_dx.values + v_at_u * du_dy.values),
-                -1. * (u_at_v * dv_dx.values + v.values * dv_dy.values)], "vector")
-            result = self.domain.staggered_grid(result, extrapolation=velocity.extrapolation)
+        def rhs(velocity, field=None):
+            u = velocity.x.values
+            v = velocity.y.values
+            if field:
+                df_dx, df_dy = spatial_gradient(field, CenteredGrid).unstack("vector")
+                u = (u[1:, :] + u[:-1, :]) / 2
+                v = (v[:, 1:] + v[:, :-1]) / 2
+                result = -1. * (u * df_dx + v * df_dy)
+                result = self.domain.scalar_grid(result)
+            else:
+                du_dx, du_dy = spatial_gradient(velocity.x, CenteredGrid).unstack("vector")
+                dv_dx, dv_dy = spatial_gradient(velocity.y, CenteredGrid).unstack("vector")
+                du_dx, du_dy = du_dx.values, du_dy.values
+                dv_dx, dv_dy = dv_dx.values, dv_dy.values
+                v_at_u = (v[:, 1:] + v[:, :-1]) / 2.  # v at center node
+                v_at_u = (v_at_u[1:, :] + v_at_u[:-1, :]) / 2.  # Values at u nodes without boundaries
+                bc_v_left = math.zeros(x=1, y=v_at_u.shape[1])  # BC for v at left boundary
+                bc_v_right = v_at_u[-2:-1, :]  # Neumman BC for v at right boundary
+                v_at_u = math.concat((bc_v_left, v_at_u, bc_v_right), 'x')  # v at u nodes
+                u_at_v = (u[1:, :] + u[:-1, :]) / 2.  # u at center nodes
+                u_at_v = (u_at_v[:, 1:] + u_at_v[:, :-1]) / 2.
+                bc_u_top = u_at_v[:, -2:-1]
+                bc_u_bottom = u_at_v[:, 0:1]
+                u_at_v = math.concat((bc_u_bottom, u_at_v, bc_u_top), 'y')
+                result = math.channel_stack([
+                    -1. * (u * du_dx + v_at_u * du_dy),
+                    -1. * (u_at_v * dv_dx + v * dv_dy)], "vector")
+                result = self.domain.staggered_grid(result, extrapolation=velocity.extrapolation)
             return result  # , du_dx.values.native().cpu().numpy(), du_dy.values.native().cpu().numpy(), dv_dx.values.native().cpu().numpy(), dv_dy.values.native().cpu().numpy()
 
         # 4th order RK
@@ -255,26 +281,43 @@ class TwoWayCouplingSimulation:
         # convection_term = self.velocity + 1 / 6. * self.dt * (rhs1 + 2 * (rhs2 + rhs3) * rhs4)
 
         # Convective term
+        # 2nd order RK
         if self.time_step_scheme == 'RK2':
-            # 2nd order RK
-            rhs1 = rhs(self.velocity)
-            k1 = self.dt * rhs1
-            rhs2 = rhs(self.velocity + k1)
-            k2 = self.dt * rhs2
-            convection_term = self.velocity + (k1 + k2) / 2.
+            # Advect smoke
+            buoyancy = 0
+            if self.smoke:
+                # 2nd order RK doesnt work well here
+                # k = rhs(self.velocity, self.smoke)
+                # smoke_ = self.smoke + self.dt / 2 * k
+                # k = rhs(self.velocity, smoke_)
+                # self.smoke = self.smoke + k * self.dt
+                self.smoke = advect.semi_lagrangian(self.smoke, self.velocity, self.dt)
+                # Sum smoke inflows
+                for inflow in self.smoke_inflow:
+                    self.smoke = self.smoke + inflow
+                # Add buoyancy effect on velocity field
+                buoyancy = (self.smoke * self.buoyancy >> self.velocity).values
+            # Advect velocity
+            k = rhs(self.velocity)
+            vel = self.velocity + self.dt / 2 * k
+            k = rhs(vel)
+            convection_term = self.velocity + k * self.dt
         elif self.time_step_scheme == 'SL':
             convection_term = advect.semi_lagrangian(self.velocity, self.velocity, self.dt)
         else: raise ValueError("Unknown time step scheme")
         # Diffusive term
         velocity_laplace = math.laplace(self.velocity.values)
         diffusion_term = velocity_laplace * self.viscosity
-        self.velocity = self.velocity.copied_with(values=convection_term.values + diffusion_term, extrapolation=self.velocity.extrapolation)
+        self.velocity = self.velocity.copied_with(values=convection_term.values + diffusion_term + buoyancy, extrapolation=self.velocity.extrapolation)
         # Apply sponge
         # If the velocity is aligned with boundary outward normal, deaccelerate, otherwise set it to 0
-        vel_boundaries = self.sponge_normal_mask * self.velocity  # Project velocity onto boundaries normal directions at sponge
-        vel_boundaries = vel_boundaries - self.sponge  # Apply sponge deacceleration
-        vel_boundaries = vel_boundaries * (vel_boundaries > 0)   # Avoid creating flow in opposite normal direction
-        vel_boundaries = vel_boundaries * self.sponge_normal_mask  # Project velocity back
+        mask = (self.sponge_normal_mask * self.velocity) < 0  # Project velocity onto boundaries normal directions at sponge
+        vel_boundaries = self.sponge_mask * self.velocity
+        vel_boundaries = vel_boundaries - vel_boundaries * self.sponge * mask  # Deaccelerate flow coming from boundaries
+        # negative_values = vel_boundaries * (vel_boundaries < 0)  # Save negative values
+        # vel_boundaries = vel_boundaries - self.sponge  # Apply sponge deacceleration
+        # vel_boundaries = vel_boundaries * (vel_boundaries > 0) + negative_values   # Avoid creating negative values due to sponge
+        # vel_boundaries = vel_boundaries * self.sponge_normal_mask  # Project velocity back
         self.velocity = self.velocity * (1 - self.sponge_mask) + vel_boundaries
         # Tripping
         if tripping_on:
@@ -309,7 +352,7 @@ class TwoWayCouplingSimulation:
         self.pressure = new_pressure
         self.velocity = new_velocity
 
-    def add_sphere(self, xy: torch.Tensor, radius: torch.Tensor):
+    def add_sphere(self, xy: list, radius: float):
         """
         Add an sphere to the simulation at xy with radius r
 
@@ -319,6 +362,21 @@ class TwoWayCouplingSimulation:
 
         """
         self.additional_obs = (Obstacle(Sphere(torch.as_tensor(xy), torch.as_tensor(radius))),)
+
+    def add_smoke(self, xy: list, radius: float, inflow: float):
+        """
+        Add a smoke source to the simulation at xy with radius r
+
+        Params:
+            xy: location of sphere
+            radius: radius of sphere
+            inflow: inflow velocity of the smoke
+
+        """
+        xy = xy[0] * self.domain.resolution[0], xy[1] * self.domain.resolution[1]
+        sphere = Sphere(torch.as_tensor(xy).to(self.device), torch.as_tensor(radius).to(self.device))
+        self.smoke_inflow += (self.domain.scalar_grid(sphere) * torch.as_tensor(inflow).to(self.device),)
+        self.smoke = self.domain.scalar_grid(0)
 
     def add_box(self, xy: list, width: float, height: float, angle: float = PI / 2, angular_velocity: float = 0):
         """
@@ -355,7 +413,7 @@ class TwoWayCouplingSimulation:
             return dvy_center - dvx_center
 
         export_funcs = dict(
-            pressure=lambda: (self.pressure.values / self.dt).native().detach().cpu().numpy(),
+            pressure=lambda: (self.pressure.values).native().detach().cpu().numpy(),
             vx=lambda: self.velocity.x.data.native().detach().cpu().numpy(),
             vy=lambda: self.velocity.y.data.native().detach().cpu().numpy(),
             obs_xy=lambda: self.obstacle.geometry.center.native().detach().cpu().numpy(),
@@ -422,7 +480,7 @@ class TwoWayCouplingSimulation:
         accessible = self.domain.grid(active, extrapolation=math.extrapolation.ConstantExtrapolation(0))
         hard_bcs = field.stagger(accessible, math.maximum, self.domain.boundaries["scalar_extrapolation"], type=StaggeredGrid)
         # Make sure pressure inside obstacle is 0
-        pressure_with_bcs = self.pressure * (1 - accessible.at(self.pressure)) / self.dt  # Solver's pressure is multiplied by dt
+        pressure_with_bcs = self.pressure * (1 - accessible.at(self.pressure))  # / self.dt
         pressure_with_normal = spatial_gradient(pressure_with_bcs, StaggeredGrid,) * pressure_with_bcs.dx
         pressure_surface = pressure_with_normal * hard_bcs
         # Force
@@ -440,15 +498,15 @@ class TwoWayCouplingSimulation:
         Detach all variables from graph
 
         """
-        self.fluid_force = math.tensor(self.fluid_force.native().detach().clone())
-        self.fluid_torque = self.fluid_torque.native().detach().clone()
-        self.pressure = self.domain.scalar_grid(self.pressure.values.native().detach().clone())
-        vx = math.tensor(self.velocity.x.values.native().detach().clone(), ("x", "y"))
-        vy = math.tensor(self.velocity.y.values.native().detach().clone(), ("x", "y"))
+        self.fluid_force = math.tensor(self.fluid_force.native().detach())
+        self.fluid_torque = self.fluid_torque.native().detach()
+        self.pressure = self.domain.scalar_grid(self.pressure.values.native().detach())
+        vx = math.tensor(self.velocity.x.values.native().detach(), ("x", "y"))
+        vy = math.tensor(self.velocity.y.values.native().detach(), ("x", "y"))
         self.velocity = self.domain.staggered_grid(math.channel_stack((vx, vy), "vector"))
-        obs_xy = self.obstacle.geometry.center.native().detach().clone()
-        obs_vx = math.tensor(self.obstacle.velocity.native().detach().clone())[0]
-        obs_vy = math.tensor(self.obstacle.velocity.native().detach().clone())[1]
+        obs_xy = self.obstacle.geometry.center.native().detach()
+        obs_vx = math.tensor(self.obstacle.velocity.native().detach())[0]
+        obs_vy = math.tensor(self.obstacle.velocity.native().detach())[1]
         if self.ic["obs_type"] == "box":
             lower = torch.as_tensor([obs_xy[0] - self.ic["obs_w"] / 2, obs_xy[1] - self.ic["obs_h"] / 2]).to(self.device)
             upper = torch.as_tensor([obs_xy[0] + self.ic["obs_w"] / 2, obs_xy[1] + self.ic["obs_h"] / 2]).to(self.device)
@@ -457,8 +515,8 @@ class TwoWayCouplingSimulation:
             geometry = Sphere(obs_xy, torch.as_tensor(self.ic["obs_w"]).to(self.device))
             obs_ang_vel = [0]
         if not self.translation_only:
-            obs_ang = self.obstacle.geometry.angle.native().detach().clone().view(1)
-            obs_ang_vel = self.obstacle.angular_velocity.native().detach().clone().view(1)
+            obs_ang = self.obstacle.geometry.angle.native().detach().view(1)
+            obs_ang_vel = self.obstacle.angular_velocity.native().detach().view(1)
             geometry = geometry.rotated(obs_ang[0])
         self.obstacle = Obstacle(
             geometry,
