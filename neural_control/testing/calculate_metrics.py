@@ -97,13 +97,9 @@ if __name__ == '__main__':
             'vars': ['error_x', 'error_y'],
             'func': calculate_stopping_error,
         },
-        'force_change': {
+        'force': {
             'vars': ['control_force_x', 'control_force_y'],
-            'func': calculate_variability,
-        },
-        'force_mean': {
-            'vars': ['control_force_x', 'control_force_y'],
-            'func': calculate_mean,
+            'func': calculate_error,
         },
         # 'torque_change': {
         #     'vars': ['control_torque'],
@@ -136,7 +132,7 @@ if __name__ == '__main__':
             print(f"Could not load information from {run_path}")
             continue
         tests = os.listdir(os.path.abspath(run_path + "/tests/"))
-        tests = [test for test in tests if "test1" in test]  # TODO only calculating metrics for one test
+        tests = [test for test in tests if test.split("_")[0] in ["test1", "test2"]]  # TODO only calculating metrics for one test
         for test in tests:
             datapath = f"{run_path}/tests/{test}/data/"
             id = run_path.split("/")[-1]
@@ -165,7 +161,8 @@ if __name__ == '__main__':
                 metrics_values, metrics_labels = func(*values_all.values(), )
                 # Logging
                 for metric_values, metric_label in zip(metrics_values, metrics_labels):
-                    export_dict[f"{metric_name}{metric_label}"] = metric_values.tolist()  # Local logging
+                    export_dict[f"{metric_name}{metric_label}"] = metric_values.flatten().tolist()  # Local logging
             # Export metrics to json file
             with open(os.path.abspath(f"{run_path}/tests/{test}/metrics.json"), 'w') as f:
                 json.dump(export_dict, f, indent="    ")
+    print("Done")

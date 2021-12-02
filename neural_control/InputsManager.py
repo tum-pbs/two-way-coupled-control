@@ -88,7 +88,7 @@ class InputsManager():
         #         1,  # Angular velocity
         #     ))
 
-    def delete_attributes(self, string: str):
+    def delete_attributes(self, keys_to_remove: list):
         """
         Delete attributes that have string on them
 
@@ -96,7 +96,7 @@ class InputsManager():
             string: attributes with this string on their name will be deleted
 
         """
-        keys = [key for key in self.__dict__.keys() if string in key]
+        keys = [key for key in self.__dict__.keys() if key in keys_to_remove]
         for key in keys: self.__dict__.pop(key, None)
 
     def export(self, filepath: str, exclude: list = [], only: list = []):

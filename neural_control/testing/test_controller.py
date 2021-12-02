@@ -16,9 +16,11 @@ if __name__ == "__main__":
     # ----------------------------------------------
     parser = argparse.ArgumentParser(description='Run test simulations with obstacle controlled by model')
     parser.add_argument("export_folder", help="Path to file containing controller coefficients")
+    parser.add_argument("tests_id", nargs="+", help="ID of tests to be performed")
     # Add an argument to device if rotation will be turned on or not
     args = parser.parse_args()
     export_folder = args.export_folder
+    tests_id = [f"test{i}" for i in args.tests_id]
     inp = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json"), ["export_stride", "translation_only", "controller"])
     coefficients_files = inp.controller["coeffs_path"]
     if inp.controller["type"] == "ls":
@@ -26,7 +28,7 @@ if __name__ == "__main__":
     elif inp.controller["type"] == "pid":
         controller = PIDController(coefficients_files, 0, inp.controller["clamp_values"])
     else: raise ValueError("Invalid controller type")
-    tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), ["test1"])  # TODO should run all tests
+    tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), tests_id)
     tests.controller = controller.get_coeffs()
     if torch.cuda.is_available():
         TORCH_BACKEND.set_default_device("GPU")
@@ -103,6 +105,7 @@ if __name__ == "__main__":
             is_first_export = True  # Used for deleting previous files on folder
             for test_i, test_attrs in enumerate(value for key, value in test.items() if 'test' in key):
                 controller.reset()
+                smoke_attrs = test_attrs['smoke']
                 sim.setup_world(
                     inp.simulation["re"],
                     inp.simulation['domain_size'],
@@ -112,9 +115,12 @@ if __name__ == "__main__":
                     inp.simulation['reference_velocity'],
                     inp.simulation['sponge_intensity'],
                     inp.simulation['sponge_size'],
-                    inp.simulation['inflow_on']
-                )
-                sim.inflow_velocity = 0  # TODO
+                    inp.simulation['inflow_on'],
+                    smoke_attrs['buoyancy'] if smoke_attrs['on'] else (0, 0))
+                if smoke_attrs['on']:
+                    for xy in smoke_attrs['xy']:
+                        sim.add_smoke(xy, smoke_attrs['radius'], smoke_attrs['inflow'])
+                    if "smoke" not in inp.export_vars: inp.export_vars.append("smoke")
                 control_force = torch.zeros(2).to(device)
                 # control_force2 = torch.zeros(2).to(device)  # TODO
                 control_force_global = torch.zeros(2).to(device)

@@ -41,18 +41,19 @@ if __name__ == "__main__":
     tests = dict(
         test1=dict(
             help_i=lambda: -1,
-            initial_conditions_path=lambda: "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
+            initial_conditions_path=lambda: "/home/ramos/phiflow/storage/baseline_simple_noinflow2/",
             smoke=dict(
                 on=lambda: False,
-            )
+            ),
+            n_steps=lambda: 1001,
         ),
         test2=dict(
             help_i=lambda: -1,
-            initial_conditions_path=lambda: "/home/ramos/phiflow/storage/baseline_simple_noinflow_fine/",
-            positions=lambda: [(randomGenerator.rand(2) * 60 + (130 - 60) / 2).tolist()],
+            initial_conditions_path=lambda: "/home/ramos/phiflow/storage/baseline_simple_noinflow_smalldt/",
+            n_steps=lambda: 2001,
             smoke=dict(
                 on=lambda: True,
-                xy=lambda: (float(randomGenerator.rand(1) * 0.2 + 0.4), 0.125),
+                xy=lambda: [[0.3, 0.1], [0.5, 0.1], [0.7, 0.1]],
                 inflow=lambda: 0.01,
                 radius=lambda: 5,
                 buoyancy=lambda: (0, 0.01),
@@ -66,14 +67,14 @@ if __name__ == "__main__":
     for label, test_attrs in tests.items():
         export_dict[label]["initial_conditions_path"] = test_attrs["initial_conditions_path"]()
     # Loop through validation cases and export data necessary for test simulations
-    for case in range(dataset.n_cases):
-        destination = np.array(dataset.get_destination(case)).tolist()
-        angles = (randomGenerator.rand(1) * 2 * 3.14159 - 3.14159).tolist()
-        for label, test_attrs in tests.items():
+    for label, test_attrs in tests.items():
+        for case in range(dataset.n_cases):
+            destination = np.array(dataset.get_destination(case)).tolist()
+            angles = (randomGenerator.rand(1) * 2 * 3.14159 - 3.14159).tolist()
             export_dict[label][f"test{case}"] = dict(
                 positions=[destination],
                 i=[-1],
-                n_steps=1001,
+                n_steps=[test_attrs["n_steps"]()],
                 angles=angles,
             )
             for key, value in test_attrs.items():
