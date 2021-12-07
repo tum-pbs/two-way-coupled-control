@@ -38,9 +38,8 @@ if __name__ == "__main__":
     # Load tests json
     model_path = f"{run_path}/trained_model_{model_id:04d}.pth"
     tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), tests_id)  # TODO currently running only test1
-    tests.model_path = model_path
     print(f"\n\n Running tests on model {model_path}")
-    for test_label, test in [(key, value) for key, value in tests.__dict__.items() if isinstance(value, dict)]:  # Loop through tests
+    for test_label, test in tests.__dict__.items():  # Loop through tests
         # ----------------------------------------------
         # ---------------- Setup simulation ------------
         # ----------------------------------------------
@@ -105,7 +104,8 @@ if __name__ == "__main__":
         last_time = 0
         with torch.no_grad():
             is_first_export = True  # Used for deleting previous files on folder
-            for test_i, test_attrs in enumerate(value for key, value in test.items() if 'test' in key):
+            for test_i, test_attrs in enumerate(value for key, value in test.items() if 'case' in key):
+                export_stride = test_attrs["export_stride"] if test_attrs.get("export_stride") else inp.export_stride
                 # Initialize tensors
                 nn_inputs_past = torch.zeros((inp.past_window, 1, inp.n_past_features)).to(device)
                 control_force = torch.zeros(2).to(device)
@@ -128,7 +128,7 @@ if __name__ == "__main__":
                     smoke_attrs['buoyancy'] if smoke_attrs['on'] else (0, 0))
                 if smoke_attrs['on']:
                     for xy in smoke_attrs['xy']:
-                        sim.add_smoke(xy, smoke_attrs['radius'], smoke_attrs['inflow'])
+                        sim.add_smoke(xy, smoke_attrs['width'], smoke_attrs['height'], smoke_attrs['inflow'])
                     if "smoke" not in inp.export_vars: inp.export_vars.append("smoke")
                 for i in range(test_attrs['n_steps']):
                     for x_objective_, ang_objective_, objective_i in zip(test_attrs['positions'], test_attrs['angles'], test_attrs['i']):
@@ -197,12 +197,12 @@ if __name__ == "__main__":
                         # sim.control_force_x2, sim.control_force_y2 = control_force_global2.detach() * ref_vars['force']  # TODO
                         sim.control_torque = control_torque.detach() * ref_vars['torque']
                     # If not on stride export just scalar values
-                    if (i % inp.export_stride != 0):  # or (i < inp.past_window + 1):
+                    if (i % export_stride != 0):  # or (i < inp.past_window + 1):
                         export_vars = export_vars_scalar
                     else:
                         export_vars = inp.export_vars
                         # Print remaining time
-                        i_remaining = (len([key for key in test.keys() if 'test' in key]) - test_i - 1) * test_attrs['n_steps'] + (test_attrs['n_steps'] - i - 1)
+                        i_remaining = (len([key for key in test.keys() if 'case' in key]) - test_i - 1) * test_attrs['n_steps'] + (test_attrs['n_steps'] - i - 1)
                         remaining = i_remaining * delta
                         remaining_h = np.floor(remaining / 60. / 60.)
                         remaining_m = np.floor(remaining / 60. - remaining_h * 60.)

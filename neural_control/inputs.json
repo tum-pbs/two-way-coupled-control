@@ -3,7 +3,7 @@
     "architecture": "fc_only",
     "past_window": 2,
     "resume_training": false,
-    "export_stride": 20,
+    "export_stride": 50,
     "learning_rate_decay_half_life": 10000,
     "max_acc": 0.25,
     "max_ang_acc": 0.025,
@@ -21,12 +21,12 @@
         "control_force_y"
     ],
     "online": {
-        "simulation_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
+        "simulation_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow2/",
         "destinations_zone_growrate": 0.33,
         "n_timesteps": 1000,
         "simulation_dropout": 1.0,
         "n_iterations": 15001,
-        "learning_rate": 0.000500,
+        "learning_rate": 0.0005,
         "n_before_backprop": 16,
         "model_export_stride": 150,
         "optimizer": "AdamW",
@@ -36,18 +36,19 @@
         ],
         "hyperparams": {
             "spatial": 15,
-            "velocity": 1,
-            "delta_force": 0.025,
+            "velocity": 5,
+            "force": 0.5,
+            "delta_force": 0.0,
             "angle": 30,
             "ang_velocity": 0.2,
             "delta_torque": 0.025,
-            "proximity": 0.5
+            "proximity": 0.1
         }
     },
     "supervised": {
-        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow2/",
         "learning_rate": 0.004,
-        "n_iterations": 320001,
+        "n_iterations": 150001,
         "dataset_path": "/home/ramos/phiflow/storage/dataset_simple_noinflow/",
         "dataset_n_steps": 1000,
         "model_export_stride": 8000,
@@ -65,19 +66,19 @@
         "dataloader_params": {
             "batch_size": 15,
             "shuffle": true,
-            "num_workers": 8
+            "num_workers": 7
         }
     },
     "simulation": {
-        "path": "/home/ramos/phiflow/storage/baseline_simple_noinflow/",
-        "n_steps": 101,
+        "path": "/home/ramos/phiflow/storage/dummy/",
+        "n_steps": 501,
         "re": 1000,
         "tripping_on": false,
-        "obs_density": 1.5,
+        "obs_density": 0.15,
         "reference_velocity": 1,
         "inflow_on": false,
         "two_obstacles": false,
-        "obs2_ang_vel": 0.00,
+        "obs2_ang_vel": 0.0,
         "dt": 0.1,
         "obs_type": "disc",
         "obs_width": 5,
@@ -93,17 +94,19 @@
         ],
         "sponge_intensity": 0.01,
         "sponge_size": [
-            3,
-            3,
-            3,
-            3
+            5,
+            5,
+            5,
+            5
         ]
     },
     "controller": {
-        "coeffs_path": [
-            "/home/ramos/phiflow/neural_control/controller_design/controller_coefficients_simple.json"
+        "ls_coeffs": [
+            "/home/ramos/phiflow/neural_control/controller_design/ls_coeffs_simple.json"
         ],
-        "type": "ls",
+        "pid_coeffs": [
+            "/home/ramos/phiflow/neural_control/controller_design/gains_pid_simple.json"
+        ],
         "clamp_values": [
             20
         ]

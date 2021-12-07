@@ -16,20 +16,22 @@ if __name__ == "__main__":
     # ----------------------------------------------
     parser = argparse.ArgumentParser(description='Run test simulations with obstacle controlled by model')
     parser.add_argument("export_folder", help="Path to file containing controller coefficients")
+    parser.add_argument("controller_type", help="ls or pid")
     parser.add_argument("tests_id", nargs="+", help="ID of tests to be performed")
     # Add an argument to device if rotation will be turned on or not
     args = parser.parse_args()
     export_folder = args.export_folder
     tests_id = [f"test{i}" for i in args.tests_id]
-    inp = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json"), ["export_stride", "translation_only", "controller"])
-    coefficients_files = inp.controller["coeffs_path"]
+    inp = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json"), ["translation_only", "controller"])
+    inp.controller['type'] = args.controller_type
     if inp.controller["type"] == "ls":
-        controller = Controller(coefficients_files)
+        controller = Controller(inp.controller["ls_coeffs"])
     elif inp.controller["type"] == "pid":
-        controller = PIDController(coefficients_files, 0, inp.controller["clamp_values"])
+        controller = PIDController(inp.controller["pid_coeffs"], 0, inp.controller["clamp_values"])
     else: raise ValueError("Invalid controller type")
-    tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), tests_id)
-    tests.controller = controller.get_coeffs()
+    inp.controller["coefs"] = controller.get_coeffs()
+    inp.export(export_folder + "/inputs.json")
+    print(f"\n\n Running tests with controller {inp.controller}")
     if torch.cuda.is_available():
         TORCH_BACKEND.set_default_device("GPU")
         device = torch.device("cuda:0")
@@ -38,15 +40,13 @@ if __name__ == "__main__":
         TORCH_BACKEND.set_default_device("CPU")
         device = torch.device("cpu")
         device_name = "CPU"
-    inp.export(export_folder + "./inputs.json")
-    print(f"\n\n Running tests with controller {tests.controller}")
-    for test_label, test in [(key, value) for key, value in tests.__dict__.items() if isinstance(value, dict)]:  # Loop through tests
+    tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), tests_id)
+    for test_label, test in tests.__dict__.items():  # Loop through tests
         # ----------------------------------------------
         # ---------------- Setup simulation ------------
         # ----------------------------------------------
-        inp.delete_attributes("simulation")
-        inp.add_values(test["initial_conditions_path"] + "/inputs.json", ["simulation"])
-        # inp.export_stride = 20  # TODO
+        inp.delete_attributes(["simulation", "export_stride"])
+        inp.add_values(test["initial_conditions_path"] + "/inputs.json", ["export_stride", "simulation"])
         # Create list of scalar variables that will be exported every step
         # export_vars_scalar = list(inp.export_vars)
         export_vars = [
@@ -81,9 +81,8 @@ if __name__ == "__main__":
             if entry in ["pressure", "vx", "vy", "obs_mask", "vorticity"]:
                 export_vars_scalar.remove(entry)
         # Save tests used in this script
-        export_path = f"{export_folder}/tests/{test_label}/"
+        export_path = f"{export_folder}/tests/{test_label}_/"
         print(f"\n Data will be saved on {export_path} \n")
-        prepare_export_folder(export_path, 0)
         tests.export(export_path + "tests.json", only=[test_label, "dataset_path", "tvt_ratio"])
         sim = TwoWayCouplingSimulation(device_name, inp.translation_only)
         sim.set_initial_conditions(
@@ -103,7 +102,8 @@ if __name__ == "__main__":
         # ----------------------------------------------
         with torch.no_grad():
             is_first_export = True  # Used for deleting previous files on folder
-            for test_i, test_attrs in enumerate(value for key, value in test.items() if 'test' in key):
+            for test_i, test_attrs in enumerate(value for key, value in test.items() if 'case' in key):
+                export_stride = test_attrs["export_stride"] if test_attrs.get("export_stride") else inp.export_stride
                 controller.reset()
                 smoke_attrs = test_attrs['smoke']
                 sim.setup_world(
@@ -119,19 +119,24 @@ if __name__ == "__main__":
                     smoke_attrs['buoyancy'] if smoke_attrs['on'] else (0, 0))
                 if smoke_attrs['on']:
                     for xy in smoke_attrs['xy']:
-                        sim.add_smoke(xy, smoke_attrs['radius'], smoke_attrs['inflow'])
-                    if "smoke" not in inp.export_vars: inp.export_vars.append("smoke")
+                        sim.add_smoke(xy, smoke_attrs['width'], smoke_attrs['height'], smoke_attrs['inflow'])
+                    if "smoke" not in export_vars: export_vars.append("smoke")
                 control_force = torch.zeros(2).to(device)
                 # control_force2 = torch.zeros(2).to(device)  # TODO
                 control_force_global = torch.zeros(2).to(device)
                 # control_force_global2 = torch.zeros(2).to(device)  # TODO
                 control_torque = torch.zeros(1).to(device)
+                last_objective = test_attrs['positions'][0]
                 for i in range(test_attrs['n_steps']):
-                    for x_objective_, ang_objective_, objective_i in zip(test_attrs['positions'], test_attrs['angles'], test_attrs['i']):
-                        # Check if objective changed
-                        if i > objective_i:
-                            x_objective = torch.tensor(x_objective_).to(device)
-                            ang_objective = torch.tensor(ang_objective_).to(device)
+                    # Get objective
+                    x_objective_ = [objective for objective, i_objective in zip(test_attrs['positions'], test_attrs['i']) if i > i_objective][-1]
+                    ang_objective_ = [objective for objective, i_objective in zip(test_attrs['angles'], test_attrs['i']) if i > i_objective][-1]
+                    x_objective = torch.tensor(x_objective_).to(device)
+                    ang_objective = torch.tensor(ang_objective_).to(device)
+                    # Reset controller if objective changes
+                    if last_objective != x_objective_:
+                        last_objective = x_objective_
+                        controller.reset()
                     sim.apply_forces(control_force_global, control_torque)  # TODO
                     # sim.apply_forces((control_force_global + control_force_global2) * ref_vars['force'], (control_force[1] - control_force2[1]) * inp.simulation["obs_width"] / 2 * ref_vars['force'])
                     sim.advect()
@@ -172,10 +177,10 @@ if __name__ == "__main__":
                         # sim.control_force_x2, sim.control_force_y2 = control_force_global2 * ref_vars['force']  # TODO
                         sim.control_torque = control_torque
                     # If not on stride just export scalar values
-                    if (i % inp.export_stride != 0):  # or (i < controller.past_window + 1):
+                    if (i % export_stride != 0):  # or (i < controller.past_window + 1):
                         export_vars_ = export_vars_scalar
                     else:
-                        i_remaining = (len([key for key in test.keys() if 'test' in key]) - test_i - 1) * test_attrs['n_steps'] + (test_attrs['n_steps'] - i - 1)
+                        i_remaining = (len([key for key in test.keys() if 'case' in key]) - test_i - 1) * test_attrs['n_steps'] + (test_attrs['n_steps'] - i - 1)
                         remaining = i_remaining * delta
                         remaining_h = np.floor(remaining / 60. / 60.)
                         remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
@@ -183,5 +188,5 @@ if __name__ == "__main__":
                         export_vars_ = export_vars
                     sim.export_data(export_path, test_i, i, export_vars_, is_first_export)
                     is_first_export = False
-                    if i % inp.export_stride != 0:
-                        continue
+
+    print("Done")

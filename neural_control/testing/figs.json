@@ -1,0 +1,70 @@
+{
+    "global": {
+        "width": 5,
+        "height": 5,
+        "export_path": "/home/ramos/phiflow/figs/"
+    },
+    "error_xy_test1": {
+        "runs": {
+            "PID": "/home/ramos/phiflow/storage/simple/pid/",
+            "LS": "/home/ramos/phiflow/storage/simple/loop_shaped/",
+            "Supervised": "/home/ramos/phiflow/storage/simple/supervised/",
+            "Online 6": "/home/ramos/phiflow/storage/simple/online_6/"
+        },
+        "test": "test1",
+        "stdd": {
+            "alpha": 0.3,
+            "facecolor": "none"
+        },
+        "metrics": [
+            {
+                "name": "general_error_xy",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "ylog": true,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.8
+                    }
+                }
+            }
+        ]
+    },
+    "trajectories_test2": {
+        "runs": {
+            "PID": "/home/ramos/phiflow/storage/simple/pid/",
+            "LS": "/home/ramos/phiflow/storage/simple/loop_shaped/",
+            "Supervised": "/home/ramos/phiflow/storage/simple/supervised/",
+            "Online 7 (before)": "/home/ramos/phiflow/storage/simple/online_7_losswrong/",
+            "Online 7 (fixed)": "/home/ramos/phiflow/storage/simple/online_7_forcenormalized/"
+        },
+        "test": "test2",
+        "all_models": true,
+        "metrics": [
+            {
+                "name": "trajectory",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            },
+            {
+                "name": "objective_xy",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "kwargs": {
+                        "linestyle": "None",
+                        "marker": "+",
+                        "color": "k"
+                    }
+                }
+            }
+        ]
+    }
+}

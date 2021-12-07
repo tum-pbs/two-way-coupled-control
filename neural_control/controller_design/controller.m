@@ -5,9 +5,9 @@ s = zpk('s');
 % m = 180; 
 
 % m = 6540;
-dt = 0.05;% G = 1 / (m * s^2);
 
-m = 117.8
+
+m = 11.78;
 dt = 0.1;
 
 A = [0 1 ; 0 0]; 
@@ -43,12 +43,12 @@ G = tf(num(1,:), den); % Transfer function of position
 %% 
 close all 
 
-Gd = tf([ 0 0.1], [1 0])  ;
+Gd = tf([ 0 0.2], [1 0])  ;
 % Gd = makeweight(10, 1, 0.01);
-[K,CL,gamma,info] = loopsyn(G,Gd, 1);
+[K,CL,gamma,info] = loopsyn(G,Gd, 0.95);
 
 K_tf = tf(K);   
-system = feedback(K * G_ss,1);
+system = feedback(K * G_ss,0.9);
 system_tf = tf(system);
 
 K_z = c2d(K_tf, dt, 'tustin'); 
@@ -158,7 +158,7 @@ buffer_effort = zeros(1,n_coefficients-1);
 plot_data = zeros(3, nt);
 
 for i = 1:nt
-    obj(i) = 36 ;
+    obj(i) = 15 ;
 %         obj(i) = 3;
 %     obj(i) = 15+ sin(i*dt*5) * 5;
 %     obj(i) = 10;
@@ -179,7 +179,7 @@ for i = 1:nt
     buffer_effort(1:end-1) = buffer_effort(2:end); 
     buffer_effort(end) = u;  
 %     u = u + sin(i*dt*0.1) * 5;
-    u = u + 10;
+    u = u + 1;
     vel = vel + u / m * dt; 
     x = x + vel * dt;
 

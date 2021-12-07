@@ -61,9 +61,8 @@ class Generator(TwoWayCouplingSimulation):
         while True:
             # for i in range(len(destinations)):
             # knots_y_vy = [1] * 4
-            knots_y_vy = [4] * 3
-            knots_y_vy[0] = 0
-            knots_y_vy[-1] = 0
+            knots_y_vy = [0, 6, 4, 1, 0]
+
             knots_y_vx = knots_y_vy
             # knots_y_vx = self.sample_random_curve(self.n_vel_spline_knots, 5.0, int(2 * seed) + 1)
             seed += 1
@@ -223,11 +222,13 @@ if __name__ == "__main__":
     # Generate trajectories
     destinations = generator.create_destinations(inp.supervised["n_simulations"], inp.simulation['domain_size'], inp.supervised['destinations_margins'])
     velocities = generator.create_trajectories(
-        int(inp.supervised['dataset_n_steps']/2 + 1),
+        int(inp.supervised['dataset_n_steps'] / 4 + 1),
         destinations,
         (inp.simulation['obs_xy'][0], inp.simulation['obs_xy'][1]),
         inp.simulation['dt'])
-    velocities = np.concatenate((velocities, velocities * 0), axis=1)
+    shape_concat = list(velocities.shape)
+    shape_concat[1] = inp.supervised['dataset_n_steps'] - shape_concat[1]
+    velocities = np.concatenate((velocities, np.zeros(shape_concat)), axis=1)
     # Probes
     probes = Probes(
         inp.simulation['obs_width'] / 2 + inp.probes_offset,

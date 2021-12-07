@@ -336,6 +336,9 @@ class TwoWayCouplingSimulation:
             new_geometry = obstacle.geometry.rotated(-obstacle.angular_velocity * self.dt)
             additional_obs += [obstacle.copied_with(geometry=new_geometry, age=obstacle.age + self.dt)]
         self.additional_obs = additional_obs
+        # Clear any smoke that might get inside obstacles
+        if self.smoke:
+            self.smoke = self.smoke * (1 - (HardGeometryMask(union([obstacle.geometry for obstacle in (self.obstacle, *self.additional_obs)])) >> self.smoke))
 
     def make_incompressible(self):
         """
@@ -363,7 +366,7 @@ class TwoWayCouplingSimulation:
         """
         self.additional_obs = (Obstacle(Sphere(torch.as_tensor(xy), torch.as_tensor(radius))),)
 
-    def add_smoke(self, xy: list, radius: float, inflow: float):
+    def add_smoke(self, xy: list, width: float, height: float, inflow: float):
         """
         Add a smoke source to the simulation at xy with radius r
 
@@ -374,8 +377,10 @@ class TwoWayCouplingSimulation:
 
         """
         xy = xy[0] * self.domain.resolution[0], xy[1] * self.domain.resolution[1]
-        sphere = Sphere(torch.as_tensor(xy).to(self.device), torch.as_tensor(radius).to(self.device))
-        self.smoke_inflow += (self.domain.scalar_grid(sphere) * torch.as_tensor(inflow).to(self.device),)
+        lower = torch.as_tensor([xy[0] - width / 2, xy[1] - height / 2]).to(self.device)
+        upper = torch.as_tensor([xy[0] + width / 2, xy[1] + height / 2]).to(self.device)
+        geometry = Box(lower, upper)
+        self.smoke_inflow += (self.domain.scalar_grid(geometry) * torch.as_tensor(inflow).to(self.device),)
         self.smoke = self.domain.scalar_grid(0)
 
     def add_box(self, xy: list, width: float, height: float, angle: float = PI / 2, angular_velocity: float = 0):
@@ -432,6 +437,7 @@ class TwoWayCouplingSimulation:
             obs2_ang_vel=lambda: [obs.angular_velocity.detach().cpu().numpy() for obs in self.additional_obs],
             cfl=lambda: (math.max(math.abs(self.velocity.values)) * self.dt).native().detach().cpu().numpy(),
             vorticity=lambda: calculate_vorticity().native().detach().cpu().numpy(),
+            smoke=lambda: (self.smoke.values).native().detach().cpu().numpy(),
             # diffusion_u=lambda: self.diffusion_term_u,
             # diffusion_v=lambda: self.diffusion_term_v,
         )
@@ -513,7 +519,7 @@ class TwoWayCouplingSimulation:
             geometry = Box(lower, upper)
         if self.ic["obs_type"] == "disc":
             geometry = Sphere(obs_xy, torch.as_tensor(self.ic["obs_w"]).to(self.device))
-            obs_ang_vel = [0]
+        obs_ang_vel = [0]
         if not self.translation_only:
             obs_ang = self.obstacle.geometry.angle.native().detach().view(1)
             obs_ang_vel = self.obstacle.angular_velocity.native().detach().view(1)

@@ -43,7 +43,8 @@ class PIDController():
             error = (1 - self.filter_amount) * error + self.filter_amount * self.past_error[i]
             P = error * self.gains['Kp'][i]
             # Integral
-            self.integrator[i] = (error + self.past_error[i]) / 2. * self.dt * self.gains['Ki'][i] + self.integrator[i]
+            self.integrator[i] = (error + self.past_error[i]) / 2. * self.dt + self.integrator[i]
+            I = self.gains['Ki'][i] * self.integrator[i]
             # Derivative
             derror = (error - self.past_error[i]) / self.dt
             if self.first_call: derror *= 0
@@ -52,7 +53,7 @@ class PIDController():
                 derror_clipped[j] = np.clip(value, -self.clamp[i], self.clamp[i])
             D = self.gains['Kd'][i] * np.array(derror_clipped)
             self.past_error[i] = error
-            effort += [P + D + self.integrator[i]]
+            effort += [P + D + I]
         self.first_call = False
         return effort
 

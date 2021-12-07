@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 from math import ceil
 import time
@@ -28,7 +29,7 @@ class Interactive_Data_Reader(Tk):
         """
         super(Interactive_Data_Reader, self).__init__()
         self.log_path = os.path.abspath(log_path)
-        self.log_variables = ["dataPath", "sModel", "sVar", "sAxis", "sPlotType", "sKwargs", "iUpdatePlot"]
+        self.log_variables = ["dataPath", "sModel", "sVar", "sAxis", "sPlotType", "sKwargs", "iUpdatePlot", "iUseTestData", "sTest"]
         self.title("Interactive_Data_Reader")
         self.nAxis = 6
         self.nMaxLoadedVariables = 30
@@ -43,22 +44,23 @@ class Interactive_Data_Reader(Tk):
         self.sVar = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
         self.sKwargs = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
         self.sAxis = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
-        self.plot_options = ["imshow", "plot", "probes", "plot", "arrows", "point", "torque"]
+        self.plot_options = ["imshow", "plot", "probes", "plot", "arrows", "point", "torque", ""]
         self.sPlotType = [StringVar(self, " ") for _ in range(self.nMaxLoadedVariables)]
         # Other variables
         self.plotHandle = [[]] * self.nMaxLoadedVariables
         self.last_update = {'time': time.time(), 'mouse_x': self.winfo_pointerx()}
         self.plotter = Plotter()
+        self.loadedData = [()] * self.nMaxLoadedVariables
         self.set_default()
         self.create_layout()
         self.load_log()
-        self.bind_functions()
         try:
             self.update_solutions()
         except:
             print("Could not load solutions. Make sure path is correct")
             pass
         self.refresh_plots()
+        self.bind_functions()
 
     def check_time(func):
         """
@@ -142,9 +144,9 @@ class Interactive_Data_Reader(Tk):
 
         """
         self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=0)
+        self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=0)
+        self.grid_columnconfigure(1, weight=1)
         # Canva for input stuff
         clicks = Canvas(self, bg="white")
         for i in range(0, self.nMaxLoadedVariables + 10):
@@ -168,7 +170,7 @@ class Interactive_Data_Reader(Tk):
         self.bReloadVariables = Button(clicks, text="Reload plots")
         self.bReloadVariables.grid(padx=3, pady=3, sticky="nsew", row=2, column=3)
         # Button for updating/reloading matplotlib plot
-        self.bToggleRefresh = Button(clicks, text="Refresh all")
+        self. bToggleRefresh = Button(clicks, text="Refresh all")
         self.bToggleRefresh.grid(padx=3, pady=3, sticky="nsew", row=2, column=2)
         # Simulation selector
         self.oModelSelector = OptionMenu(clicks, self.sModel, " ")
@@ -281,7 +283,7 @@ class Interactive_Data_Reader(Tk):
         self.sSnapshotSelector.configure(command=self.update_snapshot)
         self.bNextSnapshot.bind("<Button-1>", self.next_snapshot)
         self.bPreviousSnapshot.bind("<Button-1>", self.previous_snapshot)
-        self.sCaseSelector.bind("<ButtonRelease-1>", self.update_case)
+        self.sCaseSelector.bind("<ButtonRelease-1>", self.update_snapshot)
         self.bNextCase.bind("<Button-1>", self.next_case)
         self.bPreviousCase.bind("<Button-1>", self.previous_case)
         self.sModel.trace("w", lambda *args: self.reset_plot())
@@ -317,7 +319,7 @@ class Interactive_Data_Reader(Tk):
         """
         i = self.sSnapshotSelector.get()
         self.sSnapshotSelector.set(i + 1 * int(self.ePlaySkip.get()))
-        self.update_case()
+        self.update_snapshot()
 
     def next_case(self, event=None):
         """
@@ -326,7 +328,7 @@ class Interactive_Data_Reader(Tk):
         """
         i = self.sCaseSelector.get()
         self.sCaseSelector.set(i + 1)
-        self.update_case()
+        self.update_snapshot()
 
     def previous_snapshot(self, event=None):
         """
@@ -335,7 +337,7 @@ class Interactive_Data_Reader(Tk):
         """
         i = self.sSnapshotSelector.get()
         self.sSnapshotSelector.set(i - 1 * int(self.ePlaySkip.get()))
-        self.update_case()
+        self.update_snapshot()
 
     def previous_case(self, event=None):
         """
@@ -344,7 +346,7 @@ class Interactive_Data_Reader(Tk):
         """
         i = self.sCaseSelector.get()
         self.sCaseSelector.set(i - 1)
-        self.update_case()
+        self.update_snapshot()
 
     def play(self, event=None):
         """ "
@@ -403,7 +405,7 @@ class Interactive_Data_Reader(Tk):
         else:
             self.datafolder = "/data/"
         try:
-            variables = os.listdir(os.path.abspath(path + "/" + self.sModel.get() + self.datafolder))
+            variables = os.listdir(os.path.abspath(f"{path}/{self.sModel.get()}{self.datafolder}"))
         except:
             print("Invalid path")
             return
@@ -415,7 +417,11 @@ class Interactive_Data_Reader(Tk):
         # Update cases selector dropdown
         allCases = os.listdir(path + "/" + self.sModel.get() + self.datafolder + variables[0])
         cases = natsorted(list(set([file.split("case")[1][:4] for file in allCases])))
-        snapshots = natsorted([int(case.split("_")[-1][:5]) for case in natsorted(allCases) if f"{variables[0]}_case{self.sCaseSelector.get():04d}" in case])
+        try:  # Try to load file with all snapshots first
+            data = np.load(f"{path}/{self.sModel.get()}/{self.datafolder}/{variables[0]}/{variables[0]}_case{self.sCaseSelector.get():04d}.npy")
+            snapshots = np.arange(data.shape[0])
+        except:  # Load files individually
+            snapshots = natsorted([int(case.split("_")[-1][:5]) for case in natsorted(allCases) if f"{variables[0]}_case{self.sCaseSelector.get():04d}" in case])
         # Update axis selector dropdown
         for selector in self.sAxis:
             if selector.get() == " ":
@@ -430,7 +436,6 @@ class Interactive_Data_Reader(Tk):
         except:
             print("Could not get variables for slides correctly")
             pass
-        # self.refresh_plots()
 
     def toggle(self, event):
         """
@@ -499,122 +504,306 @@ class Interactive_Data_Reader(Tk):
         Update plots according to current snapshot
 
         """
-        path = self.dataPath.get()
-        snapshot = self.snapshot
-        model = self.sModel.get()
         for i in range(self.nMaxLoadedVariables):
             if not self.iUpdatePlot[i].get():
                 continue
-            var = self.sVar[i].get()
-            case = self.sCaseSelector.get()
-            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy")
-            if not os.path.exists(filepath): continue  # Make sure file exists
             plotType = self.sPlotType[i].get()
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
+            # Extract kwargs
             for string in strings:
                 if string == " " or string == "":
                     continue
                 kwargs[string.split("=")[0].strip()] = eval(string.split("=")[1].strip())
-            if plotType == "imshow":
-                data = np.load(filepath)
-                self.plotHandle[i][0].set_data(data.transpose())
-            if plotType == "plot":
-                data = np.load(filepath)
-                if data.size == 2:
-                    data = [[value] for value in data]
-                elif data.size == 1:
-                    data = [[snapshot], [data]]
-                else:
-                    print(f"Invalid plot for variable {i}")
-                    continue
-                self.plotHandle[i][0].set_data(data)
-            if plotType == 'point':
-                vars_set = {'x', 'y'}
-                if not (vars_set <= kwargs.keys()):
-                    continue
-                x = np.load(filepath)
-                y = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:05d}.npy")
-                data = [x, y][::1 - 2 * (kwargs['x'] == False)]  # check if order should be inverted
-                kwargs.pop('x', None)
-                kwargs.pop('y', None)
-                self.plotHandle[i][0].set_data(data)
-            if plotType == "probes":
-                data = np.load(filepath)
-                self.plotHandle[i][0].set_data(data)
-            if plotType == "arrows":
-                vars_set = {'u', 'v'}
-                if not (vars_set <= kwargs.keys()):
-                    continue
-                offset = 0
-                if "offset" in kwargs and "angle" in kwargs:
-                    angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:05d}.npy")[0]
-                    offset = (kwargs["offset"] * np.cos(-angle), kwargs["offset"] * np.sin(-angle))
-                    kwargs.pop('offset', None)
-                    kwargs.pop('angle', None)
-                data_xy = np.load(filepath) + offset
-                data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:05d}.npy")
-                data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:05d}.npy")
-                self.plotHandle[i][0].set_UVC(data_u, data_v)
-                self.plotHandle[i][0].set_offsets(data_xy)
-            # Torque
-            if plotType == "torque":
-                vars_set = {'torque', 'offset', 'angle'}
-                if not (vars_set <= kwargs.keys()):
-                    continue
-                data_xy = np.load(filepath)
-                angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:05d}.npy")
-                torque = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:05d}.npy")
-                offset = kwargs['offset']
-                anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
-                anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])
-                data_v = [np.cos(angle) * torque, -np.cos(angle) * torque]
-                data_u = [np.sin(angle) * torque, -np.sin(angle) * torque]
-                anchor_x += data_xy[0]
-                anchor_y += data_xy[1]
-                kwargs.pop('torque', None)
-                kwargs.pop('offset', None)
-                kwargs.pop('angle', None)
-                self.plotHandle[i][0].set_UVC(data_u, data_v)
-                new_xy = ((anchor_x[0, 0], anchor_y[0, 0]), (anchor_x[1, 0], anchor_y[1, 0]))
-                self.plotHandle[i][0].set_offsets(new_xy)
+            try:
+                getattr(self, f"update_{plotType}")(i, **kwargs)
+            except (AttributeError, FileNotFoundError) as e:
+                print(f"Didn't find file for {plotType} {self.sVar[i].get()}")
+                pass
+
         self.display.draw()
         self.update()
 
-    @ check_time
-    def update_case(self, event=None):
+    def plot_imshow(self, i, **kwargs: dict):
         """
-        Update plots based on case
+        Create imshow plot
 
         """
-        path = self.dataPath.get()
+        var = self.sVar[i].get()
+        case = self.sCaseSelector.get()
+        axis = self.sAxis[i].get()
+        filepath = self.get_filepath(var, case, self.snapshot, allframes=False)
+        data = np.load(filepath)
+        self.loadedData[i] = lambda l: np.load(self.get_filepath(var, case, l))
+        self.plotter.add_data([data], [var])
+        image, *_ = self.plotter.imshow([var], f"plot{axis}", **kwargs)
+        self.plotHandle[i] = [image]
+
+    def update_imshow(self, i, **kwargs):
+        """
+        Update imshow plot
+        """
+        data = self.loadedData[i](self.snapshot)
+        self.plotHandle[i][0].set_data(data.transpose())
+
+    def plot_plot(self, i, **kwargs: dict):
+        """
+        Create line plot
+
+        """
+        var = self.sVar[i].get()
+        case = self.sCaseSelector.get()
+        axis = self.sAxis[i].get()
         snapshot = self.snapshot
-        model = self.sModel.get()
-        for i in range(self.nMaxLoadedVariables):
-            if not self.iUpdatePlot[i].get():
-                continue
-            var = self.sVar[i].get()
-            case = self.sCaseSelector.get()
-            plotType = self.sPlotType[i].get()
-            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy")
-            if not os.path.exists(filepath): continue  # Make sure file exists
-            kwargs = {}
-            strings = self.sKwargs[i].get().split(", ")
-            for string in strings:
-                if string == " " or string == "":
-                    continue
-                kwargs[string.split("=")[0].strip()] = eval(string.split("=")[1].strip())
-            # Update lines
-            if plotType == "plot":
-                snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
-                data = np.ones((2, int(snapshots[-1] - snapshots[0] + 1))) * snapshots
-                for j, snapshot_local in enumerate(snapshots):
-                    filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):05d}.npy")
-                    loaded_data = np.load(filepath)
-                    data[2 - loaded_data.size:, j] = loaded_data
-                self.plotHandle[i][0].set_data(data)
-                self.plotHandle[i][1].set_data(data)
-        self.update_snapshot()
+        filepath, allframes = self.get_filepath(var, case, snapshot, allframes=True)
+        data_ = np.load(filepath)
+        # Put data in correct format
+        if allframes: data = data_[snapshot]
+        else: data = np.copy(data_)
+        # Check wheter data is 2D or 3D
+        if data.size == 2:
+            data = [[value] for value in data]
+            should_create_grid = False
+        elif data.size == 1:
+            data = [[snapshot], [data]]
+            should_create_grid = True
+        else:
+            print(f"Invalid plot for variable {i}")
+            return
+        # Create dot
+        self.plotter.add_data([data], [var])
+        dot_handle, *_ = self.plotter.plot([var], f"plot{axis}", marker="o", color="black", create_legend=False)  # Plot dot for current snapshot
+        # Create line
+        if allframes:
+            data_y = data_[:, -1]
+            if data_.shape[1] == 2: data_x = data_[:, 0]  # 2D
+            else: data_x = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)  # Use snapshots as x axis
+            data_line = [data_x, data_y]
+        else:
+            snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
+            data_y = np.zeros_like(snapshots, dtype='f')
+            data_x = np.zeros_like(snapshots, dtype='f')
+            for j, snapshot_local in enumerate(snapshots):
+                loaded_data = np.load(self.get_filepath(var, case, snapshot_local))
+                if loaded_data.size == 2:
+                    data_x[j], data_y[j] = loaded_data
+                else:
+                    data_x[j] = snapshot_local
+                    data_y[j] = loaded_data
+            data_line = [data_x, data_y]
+        self.loadedData[i] = lambda l: np.copy([data_x[l], data_y[l]])  # Save loaded data for later use
+        self.plotter.add_data([data_line], [var])
+        lines_handle, *_ = self.plotter.plot([var], f"plot{axis}", create_grid=should_create_grid, **kwargs)
+        self.plotHandle[i] = [*dot_handle, *lines_handle]
+
+    def update_plot(self, i, **kwargs):
+        data = self.loadedData[i](self.snapshot)
+        self.plotHandle[i][0].set_data(data)
+
+    def plot_point(self, i, **kwargs: dict):
+        """
+        Create point plot
+        """
+        var = self.sVar[i].get()
+        case = self.sCaseSelector.get()
+        axis = self.sAxis[i].get()
+        snapshot = self.snapshot
+        filepath_x, allframes_x = self.get_filepath(var, case, snapshot, allframes=True)
+        filepath_y, allframes_y = self.get_filepath(kwargs['y'], case, snapshot, allframes=True)
+        allframes = allframes_x and allframes_y
+        vars_set = {'x', 'y'}
+        if not (vars_set <= kwargs.keys()):
+            return
+        # Try to load all snapshots
+        data_x = np.load(filepath_x)
+        data_y = np.load(filepath_y)
+        if allframes:
+            self.loadedData[i] = lambda l: [data_x[l], data_y[l]]
+            x = data_x[snapshot].reshape(())
+            y = data_y[snapshot].reshape(())
+        # Load individual snapshot
+        else:
+            kwargs_y = kwargs['y']
+            self.loadedData[i] = lambda l: [
+                np.load(self.get_filepath(var, case, l)),
+                np.load(self.get_filepath(kwargs_y, case, snapshot))
+            ]
+            x = data_x
+            y = data_y
+        data = [[x], [y]][::1 - 2 * (kwargs['x'] == False)]  # check if order should be inverted
+        kwargs.pop('x', None)
+        kwargs.pop('y', None)
+        self.plotter.add_data([data], [var])
+        dot_handle = self.plotter.plot([var], f"plot{axis}", create_grid=False, create_legend=False, marker="o", color="tab:gray", ** kwargs)
+        self.plotHandle[i], *_ = dot_handle
+
+    def update_point(self, i, **kwargs):
+        vars_set = {'x', 'y'}
+        if not (vars_set <= kwargs.keys()):
+            return
+        x, y = self.loadedData[i](self.snapshot)
+        data = [x, y][::1 - 2 * (kwargs['x'] == False)]  # check if order should be inverted
+        kwargs.pop('x', None)
+        kwargs.pop('y', None)
+        self.plotHandle[i][0].set_data(data)
+
+    def plot_probes(self, i, **kwargs: dict):
+        """
+        Create probes plot
+        """
+        var = self.sVar[i].get()
+        case = self.sCaseSelector.get()
+        axis = self.sAxis[i].get()
+        snapshot = self.snapshot
+        filepath, allframes = self.get_filepath(var, case, snapshot, allframes=True)
+        data_ = np.load(filepath)
+        if allframes:
+            self.loadedData[i] = lambda l: data_[l]
+            data = data_[snapshot]
+        else:
+            self.loadedData[i] = lambda l: np.load(self.get_filepath(var, case, l))
+            data = data_
+        self.plotter.add_data([data], [var])
+        self.plotHandle[i], *_ = self.plotter.plot([var], f"plot{axis}", marker="x", color="black", linestyle='None', create_legend=False)  # Plot crosses on probes points
+
+    def update_probes(self, i, **kwargs):
+        data = self.loadedData[i](self.snapshot)
+        self.plotHandle[i][0].set_data(data)
+
+    def plot_arrows(self, i, **kwargs: dict):
+        """
+        Create arrows plot
+        """
+        var = self.sVar[i].get()
+        case = self.sCaseSelector.get()
+        axis = self.sAxis[i].get()
+        snapshot = self.snapshot
+        filepath_xy, allframes_xy = self.get_filepath(var, case, snapshot, allframes=True)
+        filepath_u, allframes_u = self.get_filepath(kwargs['u'], case, snapshot, allframes=True)
+        filepath_v, allframes_v = self.get_filepath(kwargs['v'], case, snapshot, allframes=True)
+        allframes = allframes_xy and allframes_u and allframes_v
+        if "offset" in kwargs and "angle" in kwargs:
+            filepath_angle, allframes_angle = self.get_filepath(kwargs['angle'], case, snapshot, allframes=True)
+            allframes = allframes and allframes_angle
+        vars_set = {'u', 'v'}
+        offset = 0
+        angle = (0,)
+        if not (vars_set <= kwargs.keys()):
+            return
+        data_xy_ = np.load(filepath_xy)
+        data_u_ = np.load(filepath_u)
+        data_v_ = np.load(filepath_v)
+        data_angle_ = np.zeros_like(data_u_)
+        if "offset" in kwargs and "angle" in kwargs:
+            data_angle_ = np.load(filepath_angle)
+            offset = kwargs['offset']
+            kwargs_angle = kwargs['angle']  # For lambda function
+        if allframes:
+            self.loadedData[i] = lambda l: [
+                data_xy_[l],
+                data_u_[l],
+                data_v_[l],
+                data_angle_[l]
+            ]
+            data_xy = data_xy_[snapshot]
+            data_u = data_u_[snapshot]
+            data_v = data_v_[snapshot]
+            angle = data_angle_[snapshot]
+        else:
+            kwargs_u, kwargs_v, = kwargs['u'], kwargs['v']
+            self.loadedData[i] = lambda l: [
+                np.load(self.get_filepath(var, case, l)),
+                np.load(self.get_filepath(kwargs_u, case, l)),
+                np.load(self.get_filepath(kwargs_v, case, l)),
+                np.load(self.get_filepath(kwargs_angle, case, l)) if 'angle' in kwargs else 0,
+            ]
+            data_xy = data_xy_
+            data_u = data_u_
+            data_v = data_v_
+            angle = data_angle_
+        offset = (offset * np.cos(-angle), offset * np.sin(-angle))  # Convert offset to x,y
+        kwargs.pop('offset', None)
+        kwargs.pop('angle', None)
+        kwargs.pop('u', None)
+        kwargs.pop('v', None)
+        self.plotHandle[i] = [self.axes[int(axis)].quiver(*(data_xy + offset), data_u, data_v, **kwargs)]
+
+    def update_arrows(self, i, **kwargs):
+        vars_set = {'u', 'v'}
+        if not (vars_set <= kwargs.keys()):
+            return
+        xy, u, v, angle = self.loadedData[i](self.snapshot)
+        offset = 0
+        if "offset" in kwargs and "angle" in kwargs:
+            offset = (kwargs["offset"] * np.cos(-angle), kwargs["offset"] * np.sin(-angle))
+            kwargs.pop('offset', None)
+            kwargs.pop('angle', None)
+        self.plotHandle[i][0].set_UVC(u, v)
+        self.plotHandle[i][0].set_offsets(xy + offset)
+
+    def plot_torque(self, i, **kwargs: dict):
+        """
+        Create torque plot
+        """
+        var = self.sVar[i].get()
+        case = self.sCaseSelector.get()
+        axis = self.sAxis[i].get()
+        snapshot = self.snapshot
+        filepath_xy, allframes_xy = self.get_filepath(var, case, allframes=True)
+        filepath_angle, allframes_angle = self.get_filepath(kwargs['angle'], case, allframes=True)
+        filepath_torque, allframes_torque = self.get_filepath(kwargs['torque'], case, allframes=True)
+        allframes = allframes_xy and allframes_angle and allframes_torque
+        vars_set = {'torque', 'offset', 'angle'}
+        if not (vars_set <= kwargs.keys()):
+            return
+        data_xy_ = np.load(filepath_xy)
+        angle_ = np.load(filepath_angle)
+        torque_ = np.load(filepath_torque)
+        offset = kwargs['offset']
+        if allframes:
+            self.loadedData[i] = lambda l: [data_xy_[l], angle_[l], torque_[l]]
+            data_xy = data_xy_[snapshot]
+            angle = angle_[snapshot]
+            torque = torque_[snapshot]
+        else:
+            kwargs_angle, kwargs_torque = kwargs['angle'], kwargs['torque']
+            self.loadedData[i] = lambda l: [
+                np.load(self.get_filepath(var, case, l)),
+                np.load(self.get_filepath(kwargs_angle, case, l)),
+                np.load(self.get_filepath(kwargs_torque, case, l)),
+            ]
+            data_xy = data_xy_
+            angle = angle_
+            torque = torque_
+        anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
+        anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])
+        data_v = [np.cos(angle) * torque, -np.cos(angle) * torque]
+        data_u = [np.sin(angle) * torque, -np.sin(angle) * torque]
+        anchor_x += data_xy[0]
+        anchor_y += data_xy[1]
+        kwargs.pop('torque', None)
+        kwargs.pop('offset', None)
+        kwargs.pop('angle', None)
+        self.plotHandle[i] = [self.axes[int(axis)].quiver(anchor_x, anchor_y, data_u, data_v, **kwargs)]
+
+    def update_torque(self, i, **kwargs):
+        vars_set = {'torque', 'offset', 'angle'}
+        if not (vars_set <= kwargs.keys()):
+            return
+        xy, angle, torque = self.loaded[i](self.snapshot)
+        offset = kwargs['offset']
+        anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
+        anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])
+        v = [np.cos(angle) * torque, -np.cos(angle) * torque]
+        u = [np.sin(angle) * torque, -np.sin(angle) * torque]
+        anchor_x += xy[0]
+        anchor_y += xy[1]
+        kwargs.pop('torque', None)
+        kwargs.pop('offset', None)
+        kwargs.pop('angle', None)
+        self.plotHandle[i][0].set_UVC(u, v)
+        new_xy = ((anchor_x[0, 0], anchor_y[0, 0]), (anchor_x[1, 0], anchor_y[1, 0]))
+        self.plotHandle[i][0].set_offsets(new_xy)
 
     def refresh_plots(self, event=None, i=None):
         """
@@ -622,120 +811,53 @@ class Interactive_Data_Reader(Tk):
 
         """
         if i:
-            if isinstance(i, (list, tuple)):
-                loop = i
-            else:
-                loop = [i]
+            if isinstance(i, (list, tuple)): loop = i
+            else: loop = [i]
         else:
             loop = range(self.nMaxLoadedVariables)
-        path = self.dataPath.get()
-        snapshot = self.sSnapshotSelector.get()
-        model = self.sModel.get()
         for i in loop:
             if not self.iUpdatePlot[i].get():
                 continue
-            var = self.sVar[i].get()
-            case = self.sCaseSelector.get()
-            axis = self.sAxis[i].get()
+
             plotType = self.sPlotType[i].get()
-            filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy")
             kwargs = {}
             strings = self.sKwargs[i].get().split(", ")
             try:
-                # Kwargs
+                # Extract kwargs
                 for string in strings:
                     if string == " " or string == "":
                         continue
                     kwargs[string.split("=")[0].strip()] = eval(string.split("=")[1].strip())
-                # Imshow
-                if plotType == "imshow":
-                    data = np.load(filepath)
-                    self.plotter.add_data([data], [var])
-                    image, *_ = self.plotter.imshow([var], f"plot{axis}", **kwargs)
-                    self.plotHandle[i] = [image]
-                # Plot
-                if plotType == "plot":
-                    data = np.load(filepath)
-                    if data.size == 2:
-                        data = [[value] for value in data]
-                        should_create_grid = False
-                    elif data.size == 1:
-                        data = [[snapshot], [data]]
-                        should_create_grid = True
-                    else:
-                        print(f"Invalid plot for variable {i}")
-                        continue
-                    self.plotter.add_data([data], [var])
-                    dot_handle, *_ = self.plotter.plot([var], f"plot{axis}", marker="o", color="black", create_legend=False)  # Plot dot for current snapshot
-                    snapshots = np.arange(int(self.sSnapshotSelector.cget("from")), int(self.sSnapshotSelector.cget("to")) + 1)
-                    data = np.ones((2, int(snapshots[-1] - snapshots[0] + 1))) * snapshots
-                    for j, snapshot_local in enumerate(snapshots):
-                        filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{int(snapshot_local):05d}.npy")
-                        loaded_data = np.load(filepath)
-                        data[2 - loaded_data.size:, j] = loaded_data
-                    self.plotter.add_data([data], [var])
-                    lines_handle, *_ = self.plotter.plot([var], f"plot{axis}", create_grid=should_create_grid, **kwargs)
-                    self.plotHandle[i] = [*dot_handle, *lines_handle]
-                # Point
-                if plotType == "point":
-                    vars_set = {'x', 'y'}
-                    if not (vars_set <= kwargs.keys()):
-                        continue
-                    x = np.load(filepath)
-                    y = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['y']}/{kwargs['y']}_case{case:04d}_{snapshot:05d}.npy")
-                    data = [[x], [y]][::1 - 2 * (kwargs['x'] == False)]  # check if order should be inverted
-                    kwargs.pop('x', None)
-                    kwargs.pop('y', None)
-                    self.plotter.add_data([data], [var])
-                    dot_handle = self.plotter.plot([var], f"plot{axis}", create_grid=False, create_legend=False, marker="o", color="tab:gray", ** kwargs)
-                    self.plotHandle[i], *_ = dot_handle
-                # Probes
-                if plotType == "probes":
-                    data = np.load(filepath)
-                    self.plotter.add_data([data], [var])
-                    self.plotHandle[i], *_ = self.plotter.plot([var], f"plot{axis}", marker="x",
-                                                               color="black", linestyle='None', create_legend=False)  # Plot crosses on probes points
-                # Arrows
-                if plotType == "arrows":
-                    vars_set = {'u', 'v'}
-                    if not (vars_set <= kwargs.keys()):
-                        continue
-                    offset = 0
-                    if "offset" in kwargs and "angle" in kwargs:
-                        angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:05d}.npy")[0]
-                        offset = (kwargs["offset"] * np.cos(-angle), kwargs["offset"] * np.sin(-angle))
-                        kwargs.pop('offset', None)
-                        kwargs.pop('angle', None)
-                    data_xy = np.load(filepath) + offset
-                    data_u = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['u']}/{kwargs['u']}_case{case:04d}_{snapshot:05d}.npy")
-                    data_v = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['v']}/{kwargs['v']}_case{case:04d}_{snapshot:05d}.npy")
-                    kwargs.pop('u', None)
-                    kwargs.pop('v', None)
-                    self.plotHandle[i] = [self.axes[int(axis)].quiver(*data_xy, data_u, data_v, **kwargs)]
-                # Torque
-                if plotType == "torque":
-                    vars_set = {'torque', 'offset', 'angle'}
-                    if not (vars_set <= kwargs.keys()):
-                        continue
-                    data_xy = np.load(filepath)
-                    angle = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['angle']}/{kwargs['angle']}_case{case:04d}_{snapshot:05d}.npy")
-                    torque = np.load(f"{path}/{model}/{self.datafolder}/{kwargs['torque']}/{kwargs['torque']}_case{case:04d}_{snapshot:05d}.npy")
-                    offset = kwargs['offset']
-                    anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
-                    anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])
-                    data_v = [np.cos(angle) * torque, -np.cos(angle) * torque]
-                    data_u = [np.sin(angle) * torque, -np.sin(angle) * torque]
-                    anchor_x += data_xy[0]
-                    anchor_y += data_xy[1]
-                    kwargs.pop('torque', None)
-                    kwargs.pop('offset', None)
-                    kwargs.pop('angle', None)
-                    self.plotHandle[i] = [self.axes[int(axis)].quiver(anchor_x, anchor_y, data_u, data_v, **kwargs)]
+                # Call proper function
+                print(f"Refreshing {plotType} {i} ")
+                getattr(self, f"plot_{plotType}")(i, **kwargs)
             except:
-                print(f"Error for plot: {plotType}, var {i}: {var} ")
+                print(f"Error for plot: {plotType}, var {i}: {self.sVar[i].get()} ")
                 self.iUpdatePlot[i].set(0)
             self.display.draw()
             self.update()
+
+    def get_filepath(self, var: str, case: int, snapshot: int, allframes: bool = False):
+        """
+        Return filepath for variable. If file with all frames exists, return that.
+
+        Params:
+            var: variable name
+            case: case number
+            snapshot: snapshot number
+            allframes: try to find file with all frames if True
+        """
+        path = self.dataPath.get()
+        model = self.sModel.get()
+        filepath = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy")
+        if allframes:
+            filepath_allframes = os.path.abspath(f"{path}/{model}/{self.datafolder}/{var}/{var}_case{case:04d}.npy")
+            if os.path.exists(filepath_allframes):
+                return filepath_allframes, True
+            else:
+                return filepath, False
+        else:
+            return filepath
 
 
 if __name__ == '__main__':

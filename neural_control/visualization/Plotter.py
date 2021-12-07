@@ -1,10 +1,7 @@
-import matplotlib
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 from matplotlib import animation, use
-from matplotlib.colors import Normalize
-import matplotlib.cm as cm
 from cycler import cycler
 from itertools import cycle
 import seaborn as sns
@@ -35,8 +32,9 @@ class Plotter():
         self.figsize = figsize
         plt.rc('axes', prop_cycle=(cycler('color', [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf'])))
         self.colors = cycle([u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf'])
-
         use('qt5agg')
+        # Make plot iteractive
+        plt.ion()
 
     def set_export_path(self, path: str):
         """
@@ -79,7 +77,7 @@ class Plotter():
             elif np.ndim(data_values) == 2:
                 self.data[id]['dim'] = '2D'
             elif np.ndim(data_values) == 3:
-                self.data[id]['dim'] = 'anim'
+                self.data[id]['dim'] = '3D'
             else:
                 raise ValueError('Data with incompatible dimensions')
 
@@ -98,6 +96,7 @@ class Plotter():
         if id not in self.figs:
             fig, ax = plt.subplots(1, 1, figsize=self.figsize, constrained_layout=constrained_layout)
             # plt.tight_layout()
+            ax.set_rasterized(True)
             self.figs[id] = {'fig': fig, 'ax': ax}
         else:
             fig = self.figs[id]['fig']
@@ -153,7 +152,7 @@ class Plotter():
             name: name of file
 
         """
-        filePath = '%s/%s.png' % (self.export_path, name)
+        filePath = '%s/%s.pdf' % (self.export_path, name)
         if isinstance(fig, plt.Figure):
             fig.savefig(filePath, dpi=100)
         elif isinstance(fig, str):
@@ -175,7 +174,19 @@ class Plotter():
             merged_kwargs[key] = value
         return merged_kwargs
 
-    def plot(self, data_ids=[None], plot_id=None, export_filename=None, x_limits=None, y_limits=None, create_legend: bool = True, create_grid: bool = False, new_axis: bool = False, **kwargs):
+    def plot(self, data_ids=[None],
+             plot_id=None,
+             export_filename=None,
+             x_limits=None,
+             y_limits=None,
+             create_legend: bool = True,
+             labels: dict = None,
+             colors: dict = None,
+             create_grid: bool = False,
+             new_axis: bool = False,
+             ylog: bool = False,
+             fill_between: dict = None,
+             ** kwargs):
         """
         Create plot of data in data_ids
 
@@ -186,20 +197,20 @@ class Plotter():
             x_limits: x limits of plot
             y_limits: y limits of plot
             create_legend: if true then a legend will be created
+            labels: dictionary containing labels for each data
+            colors: dictionary containing colors for each data
             create_grid: if true then a grid will be created
             new_axis: if true then another vertical axes will be created
+            ylog: if true then y axis will be logarithmic
+            fill_between: dictionary containing fill_between parameters
             kwargs: kwargs for plot
 
         """
         assert isinstance(data_ids, list)
         merged_kwargs = self.merge_kwargs(self.plot_kwargs, kwargs)
         for id, data in self.data.items():
-            if data_ids[0] is None:
-                if data['dim'] not in ['1D', '2D']:
-                    continue
-            else:
-                if id not in data_ids:
-                    continue
+            if data_ids[0] is not None and id not in data_ids:
+                continue
             plot_id_local = id if plot_id is None else plot_id
             fig, ax = self.check_plot_id(plot_id_local)
             if new_axis:
@@ -207,18 +218,34 @@ class Plotter():
                     ax = ax.twinx()
                 else:
                     ax = fig.axes[1]
+            # Labels
+            if not labels: labels = {id: id}
+            # Colors
+            if colors:
+                if id in colors:
+                    merged_kwargs['color'] = colors[id]
+            # Plot
             if data['dim'] == '1D':
-                line = ax.plot(data['values'], label=id if create_legend else None, **merged_kwargs)
+                line = ax.plot(data['values'], label=labels[id] if create_legend else None, **merged_kwargs)
             if data['dim'] == '2D':
-                line = ax.plot(data['values'][0], data['values'][1], label=id if create_legend else None, **merged_kwargs)
-            if create_legend:
-                ax.legend()
-            if create_grid:
-                ax.grid(True, linestyle='--')
-            if x_limits is not None:
-                ax.set_xlim(x_limits)
-            if y_limits is not None:
-                ax.set_ylim(y_limits)
+                line = ax.plot(*data['values'], label=labels[id] if create_legend else None, **merged_kwargs)
+            if data['dim'] == '3D':
+                line = []
+                for xy in data['values']:
+                    line.append(ax.plot(*xy, label=labels[id] if create_legend else None, **merged_kwargs))
+            # Legend
+            if create_legend: ax.legend()
+            # Grid
+            if create_grid: ax.grid(True, linestyle='--')
+            # Limits
+            if x_limits is not None: ax.set_xlim(x_limits)
+            if y_limits is not None: ax.set_ylim(y_limits)
+            # Y scale
+            if ylog: ax.set_yscale('log')
+            # Fill between (working only with 1D)
+            if fill_between is not None and data['dim'] == '1D':
+                offset = fill_between[id]['offset']
+                ax.fill_between(line[0].get_xdata(), data['values'] - offset, data['values'] + offset, color=line[0].get_color(), **fill_between[id]['kwargs'])
             export_filename_ = id if export_filename is None else export_filename
             if self.should_export:
                 self.export(fig, export_filename_)
@@ -303,7 +330,7 @@ class Plotter():
         merged_kwargs = self.merge_kwargs(self.imshow_kwargs, kwargs)
         for id, data in self.data.items():
             if data_ids[0] is None:
-                if data['dim'] is not 'anim':
+                if data['dim'] is not '3D':
                     continue
             else:
                 if id not in data_ids:
@@ -392,7 +419,7 @@ class Plotter():
         merged_kwargs = self.merge_kwargs(self.scatter_kwargs, kwargs)
         for id, data in self.data.items():
             if data_ids[0] is None:
-                if data['dim'] is not '2D':
+                if data['dim'] != '2D':
                     continue
             else:
                 if id not in data_ids:
