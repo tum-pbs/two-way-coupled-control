@@ -9,9 +9,9 @@ from InputsManager import InputsManager
 
 if __name__ == "__main__":
     randomGenerator = np.random.RandomState()
-    randomGenerator.seed(900)
     tests = dict(
         test1=dict(
+            seed=900,
             initial_conditions_path="/home/ramos/phiflow/storage/baseline_simple_noinflow2/",
             n_simulations=20,
             positions=lambda: ((randomGenerator.rand(2) * 40 + 20).tolist(),),
@@ -43,12 +43,73 @@ if __name__ == "__main__":
                 buoyancy=(0, 0.02),
             )
         ),
+        test3=dict(
+            seed=200,
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_box/",
+            n_simulations=20,
+            positions=lambda: ((randomGenerator.rand(2) * 40 + 20).tolist(),),
+            help_i=lambda: [-1],
+            i=lambda: [-1],
+            smoke=lambda: dict(
+                on=False,
+            ),
+            n_steps=lambda: 1001,
+            angles=lambda: (randomGenerator.rand(1) * 2 * 3.14159 - 3.14159).tolist()
+        ),
+        test4=dict(
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_box_inflow/",
+            n_simulations=1,
+            positions=lambda: [[75, 40], [75, 70], [120, 40], [120, 70]],
+            i=lambda: [-1, 2000, 4000, 6000],
+            smoke=lambda: dict(
+                on=False,
+            ),
+            n_steps=lambda: 8001,
+            export_stride=lambda: 50,
+            angles=lambda: [1.047197, -1.047197, 2.09439, -1.57079]
+        ),
+        test5=dict(
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_box_inflow/",
+            n_simulations=1,
+            positions=lambda: [[75, 40], [75, 70], [120, 40], [120, 70]],
+            i=lambda: [-1, 2000, 4000, 6000],
+            smoke=lambda: dict(
+                on=True,
+                xy=[[0.50, 0.2]],
+                inflow=0.01,
+                width=150,
+                height=6,
+                buoyancy=(0, 0.04),
+            ),
+            n_steps=lambda: 8001,
+            export_stride=lambda: 50,
+            angles=lambda: [1.047197, -1.047197, 2.09439, -1.57079]
+        ),
+        test6=dict(
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_box_two_obstacles/",
+            n_simulations=1,
+            positions=lambda: [[75, 40], [75, 70], [120, 40], [120, 70]],
+            i=lambda: [-1, 2000, 4000, 6000],
+            smoke=lambda: dict(
+                on=True,
+                xy=[[0.50, 0.2]],
+                inflow=0.01,
+                width=150,
+                height=6,
+                buoyancy=(0, 0.04),
+            ),
+            n_steps=lambda: 8001,
+            export_stride=lambda: 50,
+            angles=lambda: [1.047197, -1.047197, 2.09439, -1.57079]
+        ),
     )
 
     export_dict = {}
     for test_id, test_attrs in tests.items():
+        randomGenerator.seed(test_attrs.pop('seed', 0))
         export_dict[test_id] = {f"case{i}": dict(positions=test_attrs['positions']()) for i in range(test_attrs['n_simulations'])}
         # Add remaining attributes
+        print(f"Generating test {test_id}")
         for case_key in export_dict[test_id]:
             for key, value in test_attrs.items():
                 if key in ["initial_conditions_path", "n_simulations"]: continue  # add this to root of test
@@ -111,6 +172,7 @@ if __name__ == "__main__":
     for test_id, test_attrs in export_dict.items():
         positions = [test_attrs[f"case{i}"]["positions"] for i in range(test_attrs["n_simulations"])]
         positions = np.array(positions)
+        plt.title(f'Trajectories {test_id}')
         plt.plot(*positions.transpose(), '+', linestyle='None')
-        plt.show()
+        # plt.show()
     print("Done")

@@ -103,7 +103,7 @@ if __name__ == "__main__":
         # ----------------------------------------------
         last_time = 0
         with torch.no_grad():
-            is_first_export = True  # Used for deleting previous files on folder
+            is_first_export = True  # TODO Used for deleting previous files on folder
             for test_i, test_attrs in enumerate(value for key, value in test.items() if 'case' in key):
                 export_stride = test_attrs["export_stride"] if test_attrs.get("export_stride") else inp.export_stride
                 # Initialize tensors
@@ -150,7 +150,7 @@ if __name__ == "__main__":
                             # if i % inp.rl['n_snapshots_per_window'] == 0:
                             control_effort = model(rl_inp.values.view(1, -1))
                         else:
-                            control_effort = model(nn_inputs_present.view(1, -1), nn_inputs_past.view(1, -1) if inp.past_window else None)
+                            control_effort = model(nn_inputs_present.view(1, -1), nn_inputs_past.view(1, -1) if inp.past_window else None, inp.bypass_tanh)
                             # control_effort = torch.clamp(control_effort, -2., 2.)
                         control_force = control_effort[0, :2]
                         control_force_global = control_force
@@ -192,7 +192,7 @@ if __name__ == "__main__":
                     sim.error_y = loss_inputs['error_y'].detach() * ref_vars['length']
                     if not inp.translation_only:
                         sim.error_x, sim.error_y = rotate(torch.tensor([sim.error_x, sim.error_y]), angle_tensor)
-                        sim.reference_angle = ang_objective.detach()
+                        sim.reference_ang = ang_objective.detach()
                         sim.error_ang = loss_inputs['error_ang'].detach() * ref_vars['angle']
                         # sim.control_force_x2, sim.control_force_y2 = control_force_global2.detach() * ref_vars['force']  # TODO
                         sim.control_torque = control_torque.detach() * ref_vars['torque']

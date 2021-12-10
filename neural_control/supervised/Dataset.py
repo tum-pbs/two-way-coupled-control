@@ -8,7 +8,7 @@ import numpy as np
 class Dataset(torch.utils.data.Dataset):
     'Characterizes a dataset for PyTorch'
 
-    def __init__(self, path: str, tvt_ratio: tuple, vars: list, ref_vars=None):
+    def __init__(self, path: str, tvt_ratio: tuple, vars: list, label_vars: list, ref_vars=None, local: bool = True):
         """
         Initialize ids and labels
 
@@ -16,15 +16,18 @@ class Dataset(torch.utils.data.Dataset):
             path: path to folder containing the data
             tvt_ratio: tuple containing the ratio of training, validation and test data
             vars: list of variables to be loaded, e.g. ['obs_vx', 'obs_vy']
+            label_vars: list of variables to be used as labels, e.g. ['control_force_x', 'control_force_y']
             ref_vars: dictionary with reference variables for normalization
+            local: if True, _local will be appended to variables names. So there must be folders with the variables in local coordinates
 
         """
         assert (np.sum(tvt_ratio) - 1.0) ** 2 < 1e-8
         self.mode = 'training'
         self.path = path + '/data/'
         self.past_window = 0
-        self.vars = vars
         self.tvt_ratio = tvt_ratio
+        self.vars = vars
+        self.label_vars = label_vars  # Variables that will be used as labels
         # Load data mean and stdd if file exists
         if os.path.isfile(path + '/mean_stdd.json'):
             with open(path + '/mean_stdd.json', 'r') as file:
@@ -42,18 +45,29 @@ class Dataset(torch.utils.data.Dataset):
             fluid_force_x='force',
             fluid_force_y='force',
             control_force_x='force',
-            control_force_y='force'
-            # probes_vx='probes_vx',
-            # probes_vy='probes_vy',
-            # obs_vx='obs_vx',
-            # obs_vy='obs_vy',
-            # error_x='error_x',
-            # error_y='error_y',
-            # fluid_force_x='fluid_force_x',
-            # fluid_force_y='fluid_force_y',
-            # control_force_x='control_force_x',
-            # control_force_y='control_force_y',
+            control_force_y='force',
+            obs_ang_vel='ang_velocity',
+            control_torque='torque',
+            error_ang='angle'
         )
+        # Append local to variables names
+        if local:
+            self.vars_ = []
+            # vars_
+            for var in self.vars:
+                if 'x' in var or 'y' in var: self.vars_.append(f'{var}_local')
+                else: self.vars_.append(var)
+            # label_vars_
+            self.label_vars_ = []
+            for var in self.label_vars:
+                if 'x' in var or 'y' in var: self.label_vars_.append(f'{var}_local')
+                else: self.label_vars_.append(var)
+            # ref_vars_hash
+            temp = dict(self.ref_vars_hash)
+            for key, value in self.ref_vars_hash.items():
+                if 'x' in key or 'y' in key:
+                    temp[f'{key}_local'] = value
+            self.ref_vars_hash = temp
         self.map_cases()
         self.update()
 
@@ -82,7 +96,7 @@ class Dataset(torch.utils.data.Dataset):
                 # Past inputs
                 x_past = ()  # dim = (past_window, features)
                 for j in reversed(range(self.past_window)):
-                    for var in self.vars:
+                    for var in self.vars_:
                         file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot-(j+1):05d}.npy'
                         data = np.load(os.path.abspath(file)).reshape(-1,)
                         factor = self.ref_vars[self.ref_vars_hash[var]]
@@ -109,7 +123,7 @@ class Dataset(torch.utils.data.Dataset):
         # Past inputs
         x_past = ()  # dim = (past_window, features)
         for j in reversed(range(self.past_window)):
-            for var in self.vars:
+            for var in self.vars_:
                 file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot-(j+1):05d}.npy'
                 data = np.load(os.path.abspath(file)).reshape(-1,)
                 factor = self.ref_vars[self.ref_vars_hash[var]]
@@ -120,7 +134,8 @@ class Dataset(torch.utils.data.Dataset):
         x_past = torch.tensor(x_past, dtype=torch.float32)
         # Present inputs
         x_present = ()
-        for var in self.vars[:-2]:
+        for var in self.vars_:
+            if var in self.label_vars_: continue  # Labels are not present inputs
             file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy'
             data = np.load(os.path.abspath(file)).reshape(-1,)
             factor = self.ref_vars[self.ref_vars_hash[var]]
@@ -130,7 +145,7 @@ class Dataset(torch.utils.data.Dataset):
         # x = torch.tensor(x_past + x_present, dtype=torch.float32)
         # Labels
         y = ()
-        for var in self.vars[-2:]:
+        for var in self.label_vars_:
             file = f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy'
             data = np.load(os.path.abspath(file)).reshape(-1)
             factor = self.ref_vars[self.ref_vars_hash[var]]
@@ -147,7 +162,7 @@ class Dataset(torch.utils.data.Dataset):
         """
         directory = os.listdir(self.path)
         # Check if there are folders for all necessary variables
-        for var in self.vars:
+        for var in self.vars_:
             if var not in directory:
                 raise AssertionError(f'Did not found {var} folder in data path')
         self.all_cases = tuple(set([int(file.split('case')[1][:4]) for file in os.listdir(f'{self.path}/{var}') if '.npy' in file]))
@@ -256,11 +271,11 @@ class Dataset(torch.utils.data.Dataset):
         for case in self.cases:
             print(case)
             for snapshot in self.all_snapshots:
-                for var in self.vars:
+                for var in self.vars_:
                     data = np.load(f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy')
                     mean[var] += data.mean()
         n = (self.cases[-1] + 1) * (self.all_snapshots[-1] + 1)
-        for var in self.vars:
+        for var in self.vars_:
             mean[var] = mean[var] / n
         self.mean = mean
         stdd = defaultdict(float)
@@ -268,21 +283,25 @@ class Dataset(torch.utils.data.Dataset):
         for case in self.cases:
             print(case)
             for snapshot in self.all_snapshots:
-                for var in self.vars:
-                    data = np.load(f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy')
+                for var in self.vars_:
+                    data = np.load(f'{self.path}/{var}/{var}_case{case:04d}_{snapshot:05d}.npy').astype(np.float64)
                     stdd[var] += ((data - mean[var])**2) / n
-        for var in self.vars:
+        for var in self.vars_:
             stdd[var] = np.sqrt(stdd[var].mean())
         self.stdd = stdd
         with open(self.path + '../mean_stdd.json', 'w') as f:
-            json.dump({'mean': dataset.mean, 'stdd': dataset.stdd, 'cases': dataset.cases, 'snapshots': dataset.snapshots}, f, indent='    ')
+            json.dump({'mean': self.mean, 'stdd': self.stdd, 'cases': self.cases, 'snapshots': self.snapshots}, f, indent='    ')
 
 
 if __name__ == '__main__':
-    dataset = Dataset('/home/ramos/phiflow/storage/dataset_simple_noinflow/', [.8, 0.2, 0.])
+    from InputsManager import InputsManager
+    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", exclude=["online", "simulation"])
+    label_vars = [var for var in inp.nn_vars if 'control' in var]
+    dataset = Dataset('/home/ramos/phiflow/storage/dataset_box_local/', inp.supervised['tvt_ratio'], inp.nn_vars, label_vars)
     dataset.set_mode('training')
     dataset.set_past_window_size(3)
     dataset.update()
+    dataset[0]
     dataset.compute_mean_stdd()
     # # Export mean and std in json file
     # with open('/home/ramos/phiflow/storage/translation/supervised_dataset_simple/mean_std.json', 'w') as f:

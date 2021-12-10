@@ -127,33 +127,40 @@ def execute(run_path):
             vars=["obs_xy"],
             func=lambda xy: ((xy.swapaxes(1, 2),), ('',)),
         ),
-        objective_xy=dict(
+        objective_xy_points=dict(
             vars=["reference_x", "reference_y"],
             func=remove_repeated
+        ),
+        angle=dict(
+            vars=["obs_ang"],
+            func=lambda alpha: ((alpha.swapaxes(1, 2),), ('',)),
+        ),
+        objective_angle=dict(
+            vars=["reference_ang"],
+            func=lambda alpha: ((alpha.swapaxes(1, 2),), ('',)),
+        ),
+        x=dict(
+            vars=["obs_xy"],
+            func=lambda xy: ((xy[..., 0:1].swapaxes(1, 2),), ('',)),
+        ),
+        objective_x=dict(
+            vars=["reference_x"],
+            func=lambda x: ((x.swapaxes(1, 2),), ('',)),
+        ),
+        y=dict(
+            vars=["obs_xy"],
+            func=lambda xy: ((xy[..., 1:2].swapaxes(1, 2),), ('',)),
+        ),
+        objective_y=dict(
+            vars=["reference_y"],
+            func=lambda y: ((y.swapaxes(1, 2),), ('',)),
         )
-
-        # 'torque_change': {
-        #     'vars': ['control_torque'],
-        #     'func': calculate_variability,
-        # },
-        # 'torque_mean': {
-        #     'vars': ['control_torque'],
-        #     'func': calculate_mean,
-        # },
-        # 'general_error_ang': {
-        #     'vars': ['error_ang'],
-        #     'func': calculate_error,
-        # },
-        # 'stopping_error_ang': {
-        #     'vars': ['error_ang'],
-        #     'func': calculate_stopping_error,
-        # },
     )
 
     # run_path = root + run_folder
     # Pre process variables
     tests = os.listdir(os.path.abspath(run_path + "/tests/"))
-    tests = [test for test in tests if test.split("_")[0] in ["test1", "test2", "test3"]]  # TODO only calculating metrics for one test
+    tests = [test for test in tests if 'test' in test]  # TODO only calculating metrics for one test
     for test in tests:
         datapath = f"{run_path}/tests/{test}/data/"
         # Get files cases
@@ -175,12 +182,11 @@ def execute(run_path):
                         print(f"\n Could not load {var} for case {case} in {datapath}. Make sure frames are grouped correctly. \n")
                         exit()
                     values_all[var] += [values]
-                values_all[var] = np.array(values_all[var])
+                values_all[var] = np.asarray(values_all[var])
             # Calculate metric
             values, labels = func(*values_all.values(), )
-            # Logging
             for value, label in zip(values, labels):
-                export_dict[f"{metric_name}{label}"] = value.tolist()  # Local logging
+                export_dict[f"{metric_name}{label}"] = value.tolist()
         # Export metrics to json file
         with open(os.path.abspath(f"{run_path}/tests/{test}/metrics.json"), 'w') as f:
             json.dump(export_dict, f, indent="    ")

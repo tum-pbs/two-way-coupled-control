@@ -1,3 +1,5 @@
+from collections import defaultdict
+from typing import DefaultDict
 from PIDController import PIDController
 import matplotlib.pyplot as plt
 from Controller import Controller
@@ -5,37 +7,36 @@ from PIDController import PIDController
 import numpy as np
 
 # controller = Controller(["/home/ramos/phiflow/neural_control/controller_design/controller_coefficients1.json", "/home/ramos/phiflow/neural_control/controller_design/controller_coefficients2.json"])
-# controller = Controller(["/home/ramos/phiflow/neural_control/controller_coefficients.json", "/home/ramos/phiflow/neural_control/controller_coefficients2.json"])
-# controller = PIDController(["/home/ramos/phiflow/neural_control/controller_design/gains_pid1.json"], 0, [10])
-controller = PIDController(["/home/ramos/phiflow/neural_control/controller_design/gains_pid1.json", "/home/ramos/phiflow/neural_control/controller_design/gains_pid2.json"], 0, [10, 0.1])
+# controller = Controller(["/home/ramos/phiflow/neural_control/controller_design/ls_coeffs_complex1.json", "/home/ramos/phiflow/neural_control/controller_design/ls_coeffs_complex2.json"])
+# controller = PIDController(["/home/ramos/phiflow/neural_control/controller_design/gains_pid_simple.json"], 0, [20])
+controller = PIDController(["/home/ramos/phiflow/neural_control/controller_design/gains_pid_box_xy.json", "/home/ramos/phiflow/neural_control/controller_design/gains_pid_box_angle.json"], 0, [20, 0.5])
 controller.reset()
-obj = np.array((10, 15))
+obj = np.array((20, 20))
 # obj = np.array((86 - 85, 56 - 55))
-obj2 = np.array((2,))
+obj2 = np.array((3,))
 # 10.092369, 21.150137  -2.13455350626117
 # obj = np.array((10.0,))
 x0 = 0
-nt = 6000
-mass = 180
-mass2 = 6350
+nt = 1000
+mass = 36
+mass2 = 4000
 dt = controller.dt
 x = x0
 x2 = x0
 vel = 0
 vel2 = 0
-storage = np.zeros((nt, 7))
-# p = np.zeros((nt, 2))
-# i = np.zeros((nt, 2))
-# d = np.zeros((nt, 2))
+storage = defaultdict(list)
 for n in range(nt):
     if n > 2500:
-        obj = np.array((130, 80))
+        # obj = np.array((130, 80))
         #     obj = np.array((2))
+        pass
     error = obj - x
     error2 = obj2 - x2
     effort = controller([error, error2])
+    # print(controller.integrator)
     # effort = controller([error])
-    # print(effort)
+    # t = 0
     u = effort[0]
     t = effort[1]
     # u = u + 10
@@ -47,56 +48,39 @@ for n in range(nt):
     vel2 = vel2 + acc2 * dt
     x2 = x2 + vel2 * dt
 
-    storage[n, :2] = u
-    storage[n, 2:4] = vel2
-    storage[n, 4:6] = error
-    storage[n, 6] = x2
+    storage['error_xy'].append(error)
+    storage['error_angle'].append(error2)
+    storage['force_xy'].append(u)
+    storage['torque_angle'].append(t)
+    storage['vel_xy'].append(vel)
+    storage['vel_angle'].append(vel2)
+    storage['integrator'].append(controller.integrator[0][0])
 
-storage = np.array(storage)
-
-# Load test
-# error_x = np.array([np.load(f'/home/ramos/phiflow/storage/controller/dummy/tests/test1/data/error_x/error_x_case0000_{i:05d}.npy') for i in range(nt)])
-# error_y = np.array([np.load(f'/home/ramos/phiflow/storage/controller/dummy/tests/test1/data/error_y/error_y_case0000_{i:05d}.npy') for i in range(nt)])
-# control_force_x = np.array([np.load(f'/home/ramos/phiflow/storage/controller/dummy/tests/test1/data/control_force_x/control_force_x_case0000_{i:05d}.npy') for i in range(nt)])
-# control_force_y = np.array([np.load(f'/home/ramos/phiflow/storage/controller/dummy/tests/test1/data/control_force_y/control_force_y_case0000_{i:05d}.npy') for i in range(nt)])
-
-plt.figure()
-# plt.plot(np.arange(nt) * dt, storage[:, 0], label='model_x')
-# plt.plot(np.arange(nt) * dt, storage[:, 1], label='model_y')
-plt.plot(np.arange(nt) * dt, storage[:, 2], 'x', label='model_x')
-plt.plot(np.arange(nt) * dt, storage[:, 3], 'x', label='model_y')
-# plt.plot(np.arange(nt) * dt, error_x, label='fluidsim_x')
-# plt.plot(np.arange(nt) * dt, error_y, label='fluidsim_y')
-
-# plt.plot(np.arange(nt) * dt, control_force_x, '+', label='fluidsim_x')
-# plt.plot(np.arange(nt) * dt, control_force_y, '+', label='fluidsim_y')
-
-plt.ylabel('Control Force')
-plt.legend()
-
-plt.figure()
-plt.plot(np.arange(nt) * dt, storage[:, 4])
-plt.plot(np.arange(nt) * dt, storage[:, 5])
-
-# plt.figure()
-# plt.plot(np.arange(nt) * dt, storage[:, 4])
-# plt.plot(np.arange(nt) * dt, storage[:, 5])
-
-# plt.figure()
-# plt.plot(np.arange(nt) * dt, storage[:, 6])
+storage = {key: np.array(value) for key, value in storage.items()}
 
 
-# plt.figure()
-# plt.title('Gains for x')
-# plt.plot(np.arange(nt) * dt, p[:, 0], label='P')
-# plt.plot(np.arange(nt) * dt, i[:, 0], label='I')
-# plt.plot(np.arange(nt) * dt, d[:, 0], label='D')
-# plt.legend()
+fig, axes = plt.subplots(3, 1)
+axes[0].plot(storage['error_xy'])
+axes[0].set_title('error_xy')
+axes[1].plot(storage['force_xy'])
+axes[1].set_title('force_xy')
+axes[2].plot(storage['vel_xy'])
+axes[2].set_title('vel_xy')
+for axes in axes:
+    axes.grid()
+fig.savefig('debug1.png')
 
-# plt.figure()
-# plt.title('Gains for y')
-# plt.plot(np.arange(nt) * dt, p[:, 1], label='P')
-# plt.plot(np.arange(nt) * dt, i[:, 1], label='I')
-# plt.plot(np.arange(nt) * dt, d[:, 1], label='D')
-# plt.legend()
-plt.show()
+fig, axes = plt.subplots(3, 1)
+axes[0].plot(storage['error_angle'])
+axes[0].set_title('error_angle')
+axes[1].plot(storage['torque_angle'])
+axes[1].set_title('torque_angle')
+axes[2].plot(storage['vel_angle'])
+axes[2].set_title('vel_angle')
+for axes in axes:
+    axes.grid()
+fig.savefig('debug2.png')
+
+fig = plt.figure()
+plt.plot(storage['integrator'])
+fig.savefig('debug23.png')

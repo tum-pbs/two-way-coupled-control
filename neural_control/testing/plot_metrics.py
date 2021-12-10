@@ -1,5 +1,5 @@
 import argparse
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from itertools import cycle
 import json
 import os
@@ -34,7 +34,6 @@ loop_dict = {key: value for key, value in figs_attrs.items() if 'global' not in 
 for fig_name, attrs in loop_dict.items():
     stdd = {}
     p = Plotter((figs_attrs['global']['width'], figs_attrs['global']['height']))
-    p.set_export_path(figs_attrs['global']['export_path'])
     data_ids = []
     for run_label, run_path in attrs['runs'].items():
         # Pre process variables
@@ -48,7 +47,7 @@ for fig_name, attrs in loop_dict.items():
                 with open(f"{datapath}/metrics.json", "r") as f:
                     data = json.load(f)
             except FileNotFoundError:
-                print("Did not find metrics.json in", datapath)
+                print(f"\n\n Did not find metrics.json in {datapath} \n\n")
                 continue
             metrics = defaultdict(lambda: 0)
             metrics.update(data)
@@ -57,7 +56,7 @@ for fig_name, attrs in loop_dict.items():
             for params in attrs['metrics']:
                 metric_name = params['name']
                 value = np.squeeze(metrics[metric_name])
-                label = f"{run_label}_{model_id}_{metric_name}"
+                label = f"{run_label}_{model_id}_/{metric_name}"
                 p.add_data([value], [label])
                 stdd[label] = metrics[metric_name + "_stdd"]
                 data_ids.append(label)
@@ -67,10 +66,15 @@ for fig_name, attrs in loop_dict.items():
     exclude = []
     for params in attrs['metrics']:
         if params['args']['kwargs'].get('color'): exclude.append(params['name'])
+    # Assign colos per run and model
     colors = {}
+    run_models = [id.split("_/")[0] for id in data_ids]
+    run_models = list(OrderedDict.fromkeys(run_models))  # Remove duplicates
+    colors_hash = {run_model: next(p.colors) for run_model in run_models}
     for id in data_ids:
         if any([metric in id for metric in exclude]): continue
-        colors[id] = next(p.colors)
+        for run_model, color in colors_hash.items():
+            if run_model in id: colors[id] = color
     # Create filling for stdd
     if attrs.get('stdd'):
         fill_params = defaultdict(dict)
@@ -89,9 +93,10 @@ for fig_name, attrs in loop_dict.items():
             if attrs.get('stdd'): args['fill_between'] = fill_params
             kwargs = args.pop('kwargs')
             args['colors'] = colors
-            args['data_ids'] = [id for id in data_ids if run_label in id and params['name'] in id]
+            args['data_ids'] = [id for id in data_ids if run_label in id and params['name'] == id.split("/")[1]]
             _, fig, _ = func(**args, **kwargs)
     p.remove_repeated_labels(fig_name)
+    p.set_export_path(figs_attrs['global']['export_path'])
     p.export(fig, fig_name)
-    p.show()
-p.clear()
+    # p.show()
+    p.clear()

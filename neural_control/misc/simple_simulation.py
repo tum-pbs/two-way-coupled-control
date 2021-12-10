@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from InputsManager import InputsManager
 from TwoWayCouplingSimulation import TwoWayCouplingSimulation
 import torch
@@ -12,10 +13,11 @@ if __name__ == "__main__":
         "fluid_force_x",
         "fluid_force_y",
         "obs_xy",
+        # "smoke",
         # "obs_vx",
-        # "obs2_xy",
-        # "obs2_ang",
-        # "obs2_ang_vel"
+        "obs2_xy",
+        "obs2_ang",
+        "obs2_ang_vel"
     ]
     simulation = TwoWayCouplingSimulation("GPU")
     inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", 'simulation')
@@ -24,7 +26,8 @@ if __name__ == "__main__":
         inp.simulation['obs_type'],
         inp.simulation['obs_width'],
         inp.simulation['obs_height'],
-        obs_xy=inp.simulation['obs_xy'])
+        obs_xy=inp.simulation['obs_xy'],
+    )
     simulation.setup_world(
         inp.simulation['re'],
         inp.simulation['domain_size'],
@@ -34,18 +37,17 @@ if __name__ == "__main__":
         inp.simulation['reference_velocity'],
         inp.simulation['sponge_intensity'],
         inp.simulation['sponge_size'],
-        inp.simulation['inflow_on']
+        inp.simulation['inflow_on'],
     )
     # Add a second box at the inflow boundary
-    # if inp.simulation['two_obstacles']:
-    #     simulation.add_obstacle(
-    #         inp.simulation["obs_type"],
-    #         # [inp.simulation['obs_width'] * 2, inp.simulation['domain_size'][1] / 2],
-    #         inp.simulation["obs_xy"],
-    #         inp.simulation['obs_height'],
-    #         inp.simulation['obs_width'],
-    #         angular_velocity=inp.simulation['obs2_ang_vel'],
-    #     )
+    if inp.simulation.get('second_obstacle', False):
+        params = inp.simulation['second_obstacle']
+        simulation.add_box(
+            params["xy"],
+            params['width'],
+            params['height'],
+            params['ang_vel'],
+        )
     with torch.no_grad():
         for i in range(initial_i, inp.simulation['n_steps']):
             # simulation.inflow_velocity = inp.simulation['inflow_velocity']  # * min((i / 500., 1.))  # Gradually increase inflow velocity

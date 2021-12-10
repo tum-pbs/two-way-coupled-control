@@ -45,7 +45,8 @@ class InputsManager():
             else:
                 print("Invalid obs_type")
             self.simulation['obs_mass'] = area * self.simulation['obs_density']
-            self.simulation['obs_inertia'] = 1 / 12.0 * (self.simulation['obs_width'] ** 2 + self.simulation['obs_height'] ** 2) * self.simulation['obs_mass']  # Box's moment of inertia
+            # self.simulation['obs_inertia'] = 1 / 12.0 * (self.simulation['obs_width'] ** 2 + self.simulation['obs_height'] ** 2) * self.simulation['obs_mass']  # Box's moment of inertia
+            self.simulation['obs_inertia'] = 4000  # To ensure numerical stability
             self.simulation['domain_size'] = np.array(self.simulation['domain_size'])
         except:
             print('Simulation properties were not calculated')

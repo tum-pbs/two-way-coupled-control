@@ -27,8 +27,8 @@ def group_frames(data_dir):
                 frames[i, ...] = np.load(f"{data_dir}/{variable}/{file}")
             np.save(f"{data_dir}/{variable}/{variable}_case{case}.npy", frames)
             # # Erase individual frame files
-            # for file in files_to_load:
-            #     os.remove(data_dir + variable + "/" + file)
+            for file in files_to_load:
+                os.remove(data_dir + variable + "/" + file)
 
 
 def execute(input_dir):

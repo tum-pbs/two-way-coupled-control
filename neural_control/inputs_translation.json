@@ -1,0 +1,142 @@
+{
+    "translation_only": true,
+    "architecture": "fc_only",
+    "past_window": 2,
+    "resume_training": false,
+    "export_stride": 50,
+    "learning_rate_decay_half_life": 100,
+    "max_acc": 1.0,
+    "max_ang_acc": 0.025,
+    "device": "GPU",
+    "probes_n_rows": 2,
+    "probes_n_columns": 3,
+    "probes_offset": 4,
+    "probes_size": 4,
+    "nn_vars": [
+        "obs_vx",
+        "obs_vy",
+        "error_x",
+        "error_y",
+        "control_force_x",
+        "control_force_y"
+    ],
+    "online": {
+        "simulation_path": "/home/brener/phiflow/storage/baseline_simple_noinflow2/",
+        "destinations_zone_growrate": 0.33,
+        "n_timesteps": 1000,
+        "simulation_dropout": 1.0,
+        "n_iterations": 1000,
+        "learning_rate": 0.01,
+        "n_before_backprop": 16,
+        "model_export_stride": 100,
+        "optimizer": "AdamW",
+        "destinations_margins": [
+            20,
+            20
+        ],
+        "hyperparams": {
+            "spatial": 15,
+            "velocity": 5,
+            "force": 0.1,
+            "delta_force": 0.1,
+            "angle": 30,
+            "ang_vel": 0.2,
+            "delta_torque": 0.025,
+            "proximity": 0.1
+        }
+    },
+    "supervised": {
+        "initial_conditions_path": "/home/brener/phiflow/storage/baseline_simple_noinflow2/",
+        "learning_rate": 0.004,
+        "n_iterations": 150001,
+        "dataset_path": "/home/brener/phiflow/storage/dataset_simple_noinflow/",
+        "dataset_n_steps": 1000,
+        "model_export_stride": 8000,
+        "n_simulations": 100,
+        "optimizer": "AdamW",
+        "destinations_margins": [
+            20,
+            20
+        ],
+        "tvt_ratio": [
+            0.8,
+            0.2,
+            0.0
+        ],
+        "dataloader_params": {
+            "batch_size": 15,
+            "shuffle": true,
+            "num_workers": 7
+        }
+    },
+    "simulation": {
+        "path": "/home/brener/phiflow/storage/dummy/",
+        "n_steps": 501,
+        "re": 1000,
+        "tripping_on": false,
+        "obs_density": 0.15,
+        "reference_velocity": 1,
+        "inflow_on": false,
+        "two_obstacles": false,
+        "obs2_ang_vel": 0.0,
+        "dt": 0.1,
+        "obs_type": "disc",
+        "obs_width": 5,
+        "obs_height": 5,
+        "time_step_scheme": "RK2",
+        "domain_size": [
+            80,
+            80
+        ],
+        "obs_xy": [
+            40,
+            40
+        ],
+        "sponge_intensity": 0.01,
+        "sponge_size": [
+            5,
+            5,
+            5,
+            5
+        ]
+    },
+    "controller": {
+        "ls_coeffs": [
+            "/home/brener/phiflow/neural_control/controller_design/ls_coeffs_simple.json"
+        ],
+        "pid_coeffs": [
+            "/home/brener/phiflow/neural_control/controller_design/gains_pid_simple.json"
+        ],
+        "clamp_values": [
+            20
+        ]
+    },
+    "export_vars": [
+        "pressure",
+        "vx",
+        "vy",
+        "obs_mask",
+        "obs_xy",
+        "obs_vx",
+        "obs_vy",
+        "control_force_x",
+        "control_force_y",
+        "fluid_force_x",
+        "fluid_force_y",
+        "probes_vx",
+        "probes_vy",
+        "probes_points",
+        "reference_x",
+        "reference_y",
+        "loss",
+        "loss_velocity",
+        "loss_spatial",
+        "error_x",
+        "error_y",
+        "loss_ang",
+        "loss_ang_vel",
+        "fluid_torque",
+        "vorticity",
+        "cfl"
+    ]
+}

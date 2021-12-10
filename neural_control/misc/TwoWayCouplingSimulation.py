@@ -186,7 +186,7 @@ class TwoWayCouplingSimulation:
         )
         # Add additional obstacle if it was provided
         try:
-            self.add_box(self.ic["obs2_xy"], self.ic["obs_h"], self.ic["obs_w"], self.ic["obs2_ang"], self.ic["obs2_ang_vel"])
+            self.add_box(self.ic["obs2_xy"], self.ic["obs_h"], self.ic["obs_w"], self.ic["obs2_ang_vel"])
         except:
             print("\n Only one obstacle in simulation")
             pass
@@ -383,7 +383,7 @@ class TwoWayCouplingSimulation:
         self.smoke_inflow += (self.domain.scalar_grid(geometry) * torch.as_tensor(inflow).to(self.device),)
         self.smoke = self.domain.scalar_grid(0)
 
-    def add_box(self, xy: list, width: float, height: float, angle: float = PI / 2, angular_velocity: float = 0):
+    def add_box(self, xy: list, width: float, height: float, ang_vel: float = 0):
         """
         Add a box to the simulation at xy with width and height
 
@@ -395,8 +395,8 @@ class TwoWayCouplingSimulation:
         """
         lower = torch.as_tensor([xy[0] - width / 2, xy[1] - height / 2]).to(self.device)
         upper = torch.as_tensor([xy[0] + width / 2, xy[1] + height / 2]).to(self.device)
-        geometry = Box(lower, upper).rotated(torch.tensor(angle).to(self.device))
-        self.additional_obs += [Obstacle(geometry, angular_velocity=torch.tensor(angular_velocity).to(self.device)), ]
+        geometry = Box(lower, upper)
+        self.additional_obs += [Obstacle(geometry, angular_velocity=torch.tensor(ang_vel).to(self.device)), ]
 
     def export_data(self, path: str, case: int, step: int, ids: tuple = None, delete_previous=True):
         """
@@ -446,7 +446,8 @@ class TwoWayCouplingSimulation:
         if delete_previous: shutil.rmtree(f"{path}/data/", ignore_errors=True)
         os.makedirs(f"{path}/data/", exist_ok=True)
         for var in ids:
-            if var in export_funcs.keys(): data = export_funcs[var]()
+            if var in export_funcs.keys():
+                data = export_funcs[var]()
             else:
                 try:
                     data = getattr(self, var)

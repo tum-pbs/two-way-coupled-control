@@ -63,7 +63,7 @@ class NeuralController(nn.Module):
             #     self.layers += [nn.Linear(int((n_features) / (2**i)), int((n_features) / (2**(i + 1))))]
             # self.layers += [nn.Linear(int((n_features) / (2**(i + 1))), n_outputs)]
 
-    def forward(self, x_present, x_past=None) -> torch.Tensor:
+    def forward(self, x_present, x_past=None, bypass_tanh=False) -> torch.Tensor:
         # if 'lstm' in self.id:
         #     l_past = self.past_layer(x_past)[0][-1:, :, :]  # Get last latent space of last cell
         #     l_present = self.present_layer(x_present)
@@ -82,7 +82,8 @@ class NeuralController(nn.Module):
             for layer in self.layers[:-1]:
                 x = F.relu(layer(x))
             x = self.layers[-1](x)
-            # x = torch.tanh(x)  # TODO
+            if not bypass_tanh:
+                x = torch.tanh(x)  # TODO
             return x
 
 

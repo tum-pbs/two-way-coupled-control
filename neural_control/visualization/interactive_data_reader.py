@@ -54,13 +54,13 @@ class Interactive_Data_Reader(Tk):
         self.set_default()
         self.create_layout()
         self.load_log()
+        self.bind_functions()
         try:
             self.update_solutions()
         except:
             print("Could not load solutions. Make sure path is correct")
             pass
         self.refresh_plots()
-        self.bind_functions()
 
     def check_time(func):
         """
@@ -289,7 +289,7 @@ class Interactive_Data_Reader(Tk):
         self.sModel.trace("w", lambda *args: self.reset_plot())
         for i, (var, kwargs, axis, plotType, refresh) in enumerate(zip(self.sVar, self.sKwargs, self.sAxis, self.sPlotType, self.bRefresh)):
             var.trace("w", lambda *args, i=i: self.reset_plot(i=i))
-            kwargs.trace("w", lambda *args, i=i: self.reset_plot(i=i))
+            # kwargs.trace("w", lambda *args, i=i: self.reset_plot(i=i))
             axis.trace("w", lambda *args, i=i: self.reset_plot(i=i))
             plotType.trace("w", lambda *args, i=i: self.reset_plot(i=i))
             refresh.bind("<Button-1>", lambda *args, i=i: self.reset_plot(i=i))
@@ -745,17 +745,17 @@ class Interactive_Data_Reader(Tk):
         """
         Create torque plot
         """
+        vars_set = {'torque', 'offset', 'angle'}
+        if not (vars_set <= kwargs.keys()):
+            return
         var = self.sVar[i].get()
         case = self.sCaseSelector.get()
         axis = self.sAxis[i].get()
         snapshot = self.snapshot
-        filepath_xy, allframes_xy = self.get_filepath(var, case, allframes=True)
-        filepath_angle, allframes_angle = self.get_filepath(kwargs['angle'], case, allframes=True)
-        filepath_torque, allframes_torque = self.get_filepath(kwargs['torque'], case, allframes=True)
+        filepath_xy, allframes_xy = self.get_filepath(var, case, snapshot, allframes=True)
+        filepath_angle, allframes_angle = self.get_filepath(kwargs['angle'], snapshot, case, allframes=True)
+        filepath_torque, allframes_torque = self.get_filepath(kwargs['torque'], case, snapshot, allframes=True)
         allframes = allframes_xy and allframes_angle and allframes_torque
-        vars_set = {'torque', 'offset', 'angle'}
-        if not (vars_set <= kwargs.keys()):
-            return
         data_xy_ = np.load(filepath_xy)
         angle_ = np.load(filepath_angle)
         torque_ = np.load(filepath_torque)
@@ -790,7 +790,7 @@ class Interactive_Data_Reader(Tk):
         vars_set = {'torque', 'offset', 'angle'}
         if not (vars_set <= kwargs.keys()):
             return
-        xy, angle, torque = self.loaded[i](self.snapshot)
+        xy, angle, torque = self.loadedData[i](self.snapshot)
         offset = kwargs['offset']
         anchor_x = np.array([np.cos(-angle) * offset, -np.cos(-angle) * offset])
         anchor_y = np.array([np.sin(-angle) * offset, -np.sin(-angle) * offset])

@@ -75,6 +75,7 @@ if __name__ == "__main__":
                 "fluid_torque",
                 "error_ang",
                 "control_torque",
+                "reference_ang"
             ]
         export_vars_scalar = list(export_vars)
         for entry in list(export_vars_scalar):
@@ -146,18 +147,14 @@ if __name__ == "__main__":
                     if i % sampling_stride == 0:
                         error_xy = (x_objective - sim.obstacle.geometry.center)
                         if not inp.translation_only:
-                            angle_tensor = -(sim.obstacle.geometry.angle - math.PI / 2.0).native()
+                            angle_tensor = -(sim.obstacle.geometry.angle - math.PI / 2.0)
                             error_ang = -ang_objective - angle_tensor
-                            control_effort = controller([np.array(error_xy.numpy()), np.array(error_ang.numpy())])
+                            control_effort = controller([np.array(error_xy.numpy()), np.array((error_ang.numpy(),))])
                             control_torque = control_effort[1]
                         else:
                             control_effort = controller([np.array(error_xy.numpy())])
                         # print(control_effort)
                         control_force = control_effort[0]
-                        # control_force = torch.as_tensor(control_effort[0], dtype=torch.float, device=device)
-                        # control_torque = torch.as_tensor(control_effort[1], dtype=torch.float, device=device)
-                        # control_effort = torch.clamp(control_effort, -1., 1.)
-                        # control_force_global = rotate(control_force, angle_tensor)
                         control_force_global = control_force
                     if math.any(sim.obstacle.geometry.center > inp.simulation['domain_size']) or math.any(sim.obstacle.geometry.center < (0, 0)):
                         break
@@ -172,8 +169,8 @@ if __name__ == "__main__":
                     # sim.error_x, sim.error_y = rotate(loss_inputs_present[0, :2] * ref_vars['length'], angle_tensor)
                     sim.control_force_x, sim.control_force_y = control_force_global
                     if not inp.translation_only:
-                        # sim.reference_angle = ang_objective
-                        sim.error_ang = -error_ang
+                        sim.reference_ang = ang_objective
+                        sim.error_ang = -error_ang.native()
                         # sim.control_force_x2, sim.control_force_y2 = control_force_global2 * ref_vars['force']  # TODO
                         sim.control_torque = control_torque
                     # If not on stride just export scalar values

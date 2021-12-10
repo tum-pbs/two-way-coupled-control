@@ -39,7 +39,7 @@ if __name__ == "__main__":
         inp.simulation['obs_xy'])
     ref_vars = dict(
         velocity=inp.simulation['reference_velocity'],
-        length=inp.simulation['obs_width'],
+        length=inp.simulation['reference_length'],
         force=inp.simulation['obs_mass'] * inp.max_acc,
         angle=PI,
         torque=inp.simulation['obs_inertia'] * inp.max_ang_acc,
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     inp.online["n_params"] = total_params
     optimizer_func = getattr(torch.optim, inp.online['optimizer'])
     optimizer = optimizer_func(model.parameters(), lr=inp.online['learning_rate'])
-    decay = np.exp(np.log(0.5) / inp.learning_rate_decay_half_life)
+    decay = np.exp(np.log(0.5) / inp.online['lr_half_life'])
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=decay)
     # ----------------------------------------------
     # ---------- Pre training processing -----------
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     torch.save(model, os.path.abspath(f"{inp.export_path}/initial_model_{first_case}.pth"))
     # Number of simulations necessary to achieve desired number of iterations
     n_simulations = inp.online["n_iterations"] / (inp.online["n_timesteps"] / inp.online["n_before_backprop"])
-    n_simulations = ceil(n_simulations / inp.online["simulation_dropout"]) + 2  # Add two to make sure we have enough simulations
+    n_simulations = ceil(n_simulations / inp.online["simulation_dropout"]) * 2  # Add double the amount necessary just in case some dont converge
     # Gradually increase objectives distances
     # Create objectives
     torch.manual_seed(900)
@@ -146,10 +146,18 @@ if __name__ == "__main__":
         loss_terms = defaultdict(lambda: 0)
         # Run simulation
         for i in range(0, inp.online['n_timesteps'] + 1):
+            # Check CFL in the first iterations due to possible numerical instabilities
+            if case < 10:
+                if math.max(math.abs(sim.velocity.values)) * sim.dt > 1.5:
+                    print("CFL too big. Resetting simulation")
+                    break
             sim.apply_forces(control_force_global * ref_vars['force'], control_torque * ref_vars['torque'])
             # sim.apply_forces((control_force_global + control_force_global2) * ref_vars['force'], (control_force[1] - control_force2[1]) * inp.simulation["obs_width"] / 2 * ref_vars['force'])
             sim.advect()
-            if math.any(sim.obstacle.geometry.center > inp.simulation['domain_size']) or math.any(sim.obstacle.geometry.center < (0, 0)): break  # In case obstacle escapes domain
+            # In case obstacle escapes domain
+            if math.any(sim.obstacle.geometry.center > inp.simulation['domain_size']) or math.any(sim.obstacle.geometry.center < (0, 0)):
+                print("Obstacle is out of bounds. Resetting simulation")
+                break
             sim.make_incompressible()
             # probes.update_transform(sim.obstacle.geometry.center.numpy(), -(sim.obstacle.geometry.angle.numpy() - math.PI / 2.0)) # TODO
             sim.calculate_fluid_forces()
@@ -158,11 +166,11 @@ if __name__ == "__main__":
             if i < inp.past_window: last_backprop = i  # Wait to backprop until past inputs are cached
             else:
                 control_effort = model(nn_inputs_present.view(1, -1), nn_inputs_past.view(1, -1))
-                control_effort = torch.clamp(control_effort, -2., 2.)
+                # control_effort = torch.clamp(control_effort, -2., 2.)
                 # control_effort = torch.tanh(control_effort)  # TODO
                 control_force = control_effort[0, :2]
-                loss_inputs_present['d_control_force_x'], loss_inputs_present['d_control_force_y'] = (control_force - last_control_force) / ref_vars['force']
-                loss_inputs_present['control_force_x'], loss_inputs_present['control_force_y'] = control_force / ref_vars['force']
+                loss_inputs_present['d_control_force_x'], loss_inputs_present['d_control_force_y'] = (control_force - last_control_force)
+                loss_inputs_present['control_force_x'], loss_inputs_present['control_force_y'] = control_force
                 last_control_force = control_force
                 if inp.translation_only:
                     control_force_global = control_force
@@ -173,9 +181,8 @@ if __name__ == "__main__":
                     control_torque = control_effort[0, -1:]
                     d_control_torque = control_torque - last_control_torque
                     last_control_torque = control_torque
-                    loss_inputs['d_control_torque'] = d_control_torque / ref_vars['torque']
-                    loss_inputs['control_torque'] = control_torque / ref_vars['torque']
-
+                    loss_inputs['d_control_torque'] = d_control_torque
+                    loss_inputs['control_torque'] = control_torque
                 # # Force 2 TODO
                 # if not inp.translation_only:
                 #     control_force2 = control_effort[0, 2:] * torch.as_tensor((0, 1)).cuda()  # TODO
@@ -237,15 +244,16 @@ if __name__ == "__main__":
             sim.error_x = loss_inputs_present['error_x'].detach() * ref_vars['length']
             sim.error_y = loss_inputs_present['error_y'].detach() * ref_vars['length']
             if not inp.translation_only:
-                sim.error_x, sim.error_y = rotate([sim.error_x, sim.error_y], angle_tensor)
-                sim.reference_angle = objective_ang[case].detach()
+                angle = -(sim.obstacle.geometry.angle - math.PI / 2.0).native().detach()
+                sim.error_x, sim.error_y = rotate(torch.cat((sim.error_x, sim.error_y)), angle)
+                sim.reference_ang = objective_ang[case].detach()
                 sim.error_ang = loss_inputs_present['error_ang'].detach() * ref_vars['angle']
                 sim.control_torque = control_torque.detach() * ref_vars['torque']
                 # sim.control_force_x2, sim.control_force_y2 = control_force_global2.detach() * ref_vars['force']  # TODO
             sim.export_data(inp.export_path, case, int(i / inp.export_stride), inp.export_vars, (case == 0 and i == 0))
             # Calculate how much time is left
             current_time = time()
-            steps_left = (((n_simulations - 1) - (case + 1)) * inp.online['n_timesteps'] + inp.online['n_timesteps'] - (i + 1)) / inp.export_stride
+            steps_left = (((n_simulations / 2 - 1) - (case + 1)) * inp.online['n_timesteps'] + inp.online['n_timesteps'] - (i + 1)) / inp.export_stride
             time_left = steps_left * (current_time - last_time) / 3600
             last_time = current_time
             time_left_hours = int(time_left)

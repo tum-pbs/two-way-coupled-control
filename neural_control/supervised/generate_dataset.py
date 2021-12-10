@@ -8,15 +8,14 @@ from shutil import copyfile
 
 # from bspline3_interpolate import bspline3_interpolate
 from natsort import natsorted
+from numpy import pi
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
-import seaborn as sns
 # from weak_coupling import *
 from TwoWayCouplingSimulation import *
 from InputsManager import InputsManager
 import time
-from Probes import Probes
-import json
+from misc_funcs import rotate
 
 
 class Generator(TwoWayCouplingSimulation):
@@ -112,10 +111,10 @@ class Generator(TwoWayCouplingSimulation):
         # plt.title('Density of vy for each timestep')
         # for vy in velocities[...,1].transpose():
         #     sns.kdeplot(vy,bw=0.5,color='r', alpha=0.5)
-        plt.show(block=True)
+        # plt.show(block=True)
         return velocities
 
-    def create_destinations(self, n: int, domain_size: list, margins: list):
+    def create_objective_xy(self, n: int, domain_size: list, margins: list):
         """
         Create end points of trajectories
 
@@ -140,8 +139,27 @@ class Generator(TwoWayCouplingSimulation):
             points += [[x, y]]
         for point in points:
             plt.plot(*point, 'o')
-        plt.show(block=True)
+        # plt.show(block=True)
         return points
+
+    def create_objective_angle(self, n: int):
+        """
+        Create end points of trajectories
+
+        Params:
+            n: number of trajectories
+            domain_size: size of the domain
+            margins: margins of the domain
+
+        """
+        randomGenerator = np.random.RandomState()
+        randomGenerator.seed(1)
+        objectives = []
+        for _ in range(n):
+            objectives += [randomGenerator.uniform(-pi, pi)]
+        plt.hist(objectives, bins=10)
+        # plt.show(block=True)
+        return objectives
 
     def distribute_data(self, training_percentage: float, test_percentage: float = None):
         """
@@ -177,21 +195,21 @@ class Generator(TwoWayCouplingSimulation):
         print(" %d files for validation (%.2f%%) \n" % (n_validation, float(n_validation) / n_files * 100))
         print(" %d files for test (%.2f%%) \n" % (n_test, float(n_test) / n_files * 100))
 
-    def set_obstacle_velocity(self, velocity):
+    def set_obstacle_velocity(self, velocity, angular_velocity=0):
         """
         Set velocity of obstacle
 
         param: velocity: velocity that will be imposed on obstacle
 
         """
-        self.obstacle = self.obstacle.copied_with(velocity=tensor(velocity))
+        self.obstacle = self.obstacle.copied_with(velocity=tensor(velocity), angular_velocity=tensor(angular_velocity))
 
 
 if __name__ == "__main__":
     export_vars = (
-        "pressure",
-        "vx",
-        "vy",
+        # "pressure",
+        # "vx",
+        # "vy",
         "obs_mask",
         "obs_xy",
         "obs_vx",
@@ -200,48 +218,71 @@ if __name__ == "__main__":
         "control_force_y",
         "fluid_force_x",
         "fluid_force_y",
-        "probes_vx",
-        "probes_vy",
-        "probes_points",
         "reference_x",
         "reference_y",
         "error_x",
         "error_y",
+        "control_torque",
+        "fluid_torque",
+        "error_ang",
+        "obs_ang_vel",
+        "control_force_x_local",
+        "control_force_y_local",
+        "obs_vx_local",
+        "obs_vy_local",
+        "error_x_local",
+        "error_y_local",
         # "obs_ang",
         # "obs_ang_vel",
     )
     inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", ["supervised"])
     inp.add_values(inp.supervised["initial_conditions_path"] + "inputs.json", ["probes", "simulation"])
-    generator = Generator(inp.device)
-    generator.set_initial_conditions(
+    gen = Generator(inp.device)
+    gen.set_initial_conditions(
         inp.simulation['obs_type'],
         inp.simulation['obs_width'],
         inp.simulation['obs_height'],
         inp.supervised["initial_conditions_path"]
     )
-    # Generate trajectories
-    destinations = generator.create_destinations(inp.supervised["n_simulations"], inp.simulation['domain_size'], inp.supervised['destinations_margins'])
-    velocities = generator.create_trajectories(
-        int(inp.supervised['dataset_n_steps'] / 4 + 1),
+    # Generate trajectories xy
+    destinations = gen.create_objective_xy(inp.supervised["n_simulations"], inp.simulation['domain_size'], inp.supervised['destinations_margins'])
+    velocities = gen.create_trajectories(
+        int(inp.supervised['dataset_n_steps'] / 2 + 1),
         destinations,
-        (inp.simulation['obs_xy'][0], inp.simulation['obs_xy'][1]),
+        (*inp.simulation['obs_xy'],),
         inp.simulation['dt'])
     shape_concat = list(velocities.shape)
     shape_concat[1] = inp.supervised['dataset_n_steps'] - shape_concat[1]
     velocities = np.concatenate((velocities, np.zeros(shape_concat)), axis=1)
-    # Probes
-    probes = Probes(
-        inp.simulation['obs_width'] / 2 + inp.probes_offset,
-        inp.simulation['obs_height'] / 2 + inp.probes_offset,
-        inp.probes_size,
-        inp.probes_n_rows,
-        inp.probes_n_columns,
-        inp.simulation['obs_xy'])
     inp.supervised["destinations"] = destinations
+    objective_angles = velocities[:, :, 0:1] * 0
+    # Generate trajectories angle
+    if not inp.translation_only:
+        objective_angles = gen.create_objective_angle(inp.supervised["n_simulations"])
+        # Duplicate in order to use the same functions used for generating velocities
+        objective_angles2 = [[-value, -value] for value in objective_angles]  # I need to invert the sign because of phiflow left hand convetion
+        ang_velocities = gen.create_trajectories(
+            int(inp.supervised['dataset_n_steps'] / 2 + 1),
+            objective_angles2,
+            (0, 0),
+            inp.simulation['dt'])
+        shape_concat = list(ang_velocities.shape)
+        shape_concat[1] = inp.supervised['dataset_n_steps'] - shape_concat[1]
+        ang_velocities = np.concatenate((ang_velocities, np.zeros(shape_concat)), axis=1)
+        ang_velocities = ang_velocities[:, :, 0]
+        inp.supervised['objective_angles'] = objective_angles
+    # # Probes
+    # probes = Probes(
+    #     inp.simulation['obs_width'] / 2 + inp.probes_offset,
+    #     inp.simulation['obs_height'] / 2 + inp.probes_offset,
+    #     inp.probes_size,
+    #     inp.probes_n_rows,
+    #     inp.probes_n_columns,
+    #     inp.simulation['obs_xy'])
     inp.export(inp.supervised["dataset_path"] + "inputs.json")
     current = time.time()
-    for i, velocity_curve in enumerate(velocities):
-        generator.setup_world(
+    for i, (velocity, ang_velocity) in enumerate(zip(velocities, ang_velocities)):
+        gen.setup_world(
             inp.simulation['re'],
             inp.simulation['domain_size'],
             inp.simulation['dt'],
@@ -251,27 +292,28 @@ if __name__ == "__main__":
             inp.simulation['sponge_intensity'],
             inp.simulation['sponge_size'],
             inp.simulation['inflow_on'])
-        for j in range(inp.supervised['dataset_n_steps'] - 1):
-            generator.set_obstacle_velocity(velocity_curve[j])
-            generator.advect()
-            generator.make_incompressible()
-            generator.calculate_fluid_forces()
-            (generator.control_force_x, generator.control_force_y) = -generator.fluid_force + inp.simulation['obs_mass'] * (velocity_curve[j + 1] - velocity_curve[j]) / inp.simulation['dt']
-            # Probes
-            angle = 0 if inp.translation_only else generator.obstacle.geometry.angle.numpy() - PI / 2
-            probes.update_transform(generator.obstacle.geometry.center.numpy(), angle)
-            probes_points = probes.get_points_as_tensor()
-            generator.probes_vx = generator.velocity.x.sample_at(probes_points).native()
-            generator.probes_vy = generator.velocity.y.sample_at(probes_points).native()
-            generator.probes_points = probes_points.native()
-            # Reference
-            generator.reference_x = destinations[i][0]
-            generator.reference_y = destinations[i][1]
-            generator.error_x = destinations[i][0] - generator.obstacle.geometry.center.numpy()[0]
-            generator.error_y = destinations[i][1] - generator.obstacle.geometry.center.numpy()[1]
-            generator.export_data(inp.supervised["dataset_path"], i, j, export_vars, delete_previous=(i == 0 and j == 0))
+        for j in range(velocities.shape[1] - 1):
+            gen.set_obstacle_velocity(velocity[j], ang_velocity[j])
+            gen.advect()
+            gen.make_incompressible()
+            gen.calculate_fluid_forces()
+            # Add variables to generator object
+            angle = (gen.obstacle.geometry.angle - math.PI / 2.0).native()  # Negative angle
+            gen.error_ang = objective_angles[i] - angle
+            gen.control_torque = -gen.fluid_torque + inp.simulation['obs_inertia'] * (ang_velocity[j + 1] - ang_velocity[j]) / inp.simulation['dt']
+            gen.control_torque = gen.control_torque.native()[0]
+            # Rotate xy vars so they are in local cooridnates
+            control_force_x, control_force_y = -gen.fluid_force + inp.simulation['obs_mass'] * (velocity[j + 1] - velocity[j]) / inp.simulation['dt']
+            gen.control_force_x_local, gen.control_force_y_local = rotate(torch.stack([control_force_x, control_force_y]), angle)
+            gen.control_force_x, gen.control_force_y = control_force_x, control_force_y
+            gen.reference_x, gen.reference_y = destinations[i][0], destinations[i][1]
+            error = torch.as_tensor(destinations[i]).to(gen.device) - gen.obstacle.geometry.center.native()
+            gen.error_x_local, gen.error_y_local = rotate(error, angle)
+            gen.error_x, gen.error_y = error
+            gen.obs_vx_local, gen.obs_vy_local = rotate(gen.obstacle.velocity.native(), angle)
+            gen.export_data(inp.supervised["dataset_path"], i, j, export_vars, delete_previous=(i == 0 and j == 0))
             if j % 50 == 0:
-                remaining = (time.time() - current) * ((inp.supervised['dataset_n_steps'] - 1 - j) + (len(velocities) - (i + 1)) * inp.supervised['dataset_n_steps']) / 50
+                remaining = (time.time() - current) * ((velocities.shape[1] - 1 - j) + (len(velocities) - (i + 1)) * velocities.shape[1]) / 50
                 remaining_h = np.floor(remaining / 60. / 60.)
                 remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
                 current = time.time()

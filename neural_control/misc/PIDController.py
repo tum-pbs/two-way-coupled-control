@@ -48,7 +48,7 @@ class PIDController():
             # Derivative
             derror = (error - self.past_error[i]) / self.dt
             if self.first_call: derror *= 0
-            derror_clipped = [[], []]
+            derror_clipped = [[]] * derror.shape[0]
             for j, value in enumerate(derror):
                 derror_clipped[j] = np.clip(value, -self.clamp[i], self.clamp[i])
             D = self.gains['Kd'][i] * np.array(derror_clipped)
