@@ -105,7 +105,14 @@ class Plotter():
             ax = self.figs[id]['ax']
         return fig, ax
 
-    def imshow(self, data_ids: list = [None], plot_id: str = None, export_filename: str = None, transpose: bool = False, **kwargs):
+    def imshow(self,
+               data_ids: list = [None],
+               plot_id: str = None,
+               export_filename: str = None,
+               transpose: bool = False,
+               create_cbar: bool = True,
+               create_title: bool = True,
+               **kwargs):
         """
         Create imshow plot of data with ids in data_ids. If data_ids is None, then all data that admits imshow will be used.
 
@@ -137,8 +144,8 @@ class Plotter():
                 image = ax.imshow(np.transpose(data['values']), **merged_kwargs)
             else:
                 image = ax.imshow(data['values'], **merged_kwargs)
-            ax.set_title(id)
-            cbar = fig.colorbar(image, ax=ax)
+            if create_title: ax.set_title(id)
+            cbar = fig.colorbar(image, ax=ax) if create_cbar else None
             export_filename_ = id if export_filename is None else export_filename
             if self.should_export:
                 self.export(fig, export_filename_)

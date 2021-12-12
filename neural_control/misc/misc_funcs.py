@@ -169,10 +169,10 @@ def calculate_loss(loss_inputs: math.Tensor, hyperparams: dict, translation_only
     velocity_term = hyperparams['velocity'] * torch.sum(obs_velocity**2 / (torch.sum(error_xy**2, 2, keepdim=True)**2 * hyperparams['proximity'] + 1))
     if not translation_only:
         error_ang = loss_inputs['error_ang']
-        angular_velocity = loss_inputs['obs_ang_velocity']
+        angular_velocity = loss_inputs['obs_ang_vel']
         delta_torque = loss_inputs['d_control_torque']
         torque = loss_inputs['control_torque']
-        ang_term = hyperparams['angle'] * torch.sum(error_ang**2 / (torch.sum(error_xy**2, 2, keepdim=True) * hyperparams['proximity'] + 1))
+        ang_term = hyperparams['angle'] * torch.sum(error_ang**2)
         ang_vel_term = hyperparams['ang_velocity'] * torch.sum(angular_velocity**2 / (error_ang**2 * hyperparams['proximity'] + 1))
         torque_term = hyperparams['torque'] * torch.sum(torque**2)
         dtorque_term = hyperparams['delta_torque'] * torch.sum(delta_torque**2)

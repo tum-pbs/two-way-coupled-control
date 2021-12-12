@@ -68,6 +68,9 @@ class Dataset(torch.utils.data.Dataset):
                 if 'x' in key or 'y' in key:
                     temp[f'{key}_local'] = value
             self.ref_vars_hash = temp
+        else:
+            self.vars_ = self.vars
+            self.label_vars_ = self.label_vars
         self.map_cases()
         self.update()
 
@@ -297,7 +300,7 @@ if __name__ == '__main__':
     from InputsManager import InputsManager
     inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", exclude=["online", "simulation"])
     label_vars = [var for var in inp.nn_vars if 'control' in var]
-    dataset = Dataset('/home/ramos/phiflow/storage/dataset_box_local/', inp.supervised['tvt_ratio'], inp.nn_vars, label_vars)
+    dataset = Dataset('/home/ramos/phiflow/storage/dataset_disc/', inp.supervised['tvt_ratio'], inp.nn_vars, label_vars, local=inp.supervised['local_coordinates'])
     dataset.set_mode('training')
     dataset.set_past_window_size(3)
     dataset.update()

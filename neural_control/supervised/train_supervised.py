@@ -19,7 +19,9 @@ from misc_funcs import get_weights_and_biases
 
 
 def calculate_loss(y, y_predict):
-    return torch.mean(torch.linalg.norm(y - y_predict, 2, -1))
+    # Return l2 loss
+    return torch.sum((y - y_predict)**2) / y.shape[0]
+    # return torch.mean(torch.linalg.norm(y - y_predict, 2, -1))
 
 
 if __name__ == '__main__':
@@ -43,9 +45,14 @@ if __name__ == '__main__':
     dataset.ref_vars["velocity"] = 2 * (dataset.stdd['obs_vx' + local_str] + dataset.stdd['obs_vy' + local_str]) / 2
     dataset.ref_vars["length"] = 2 * (dataset.stdd['error_x' + local_str] + dataset.stdd['error_y' + local_str]) / 2
     dataset.ref_vars["force"] = 2 * (dataset.stdd['control_force_x' + local_str] + dataset.stdd['control_force_y' + local_str]) / 2
-    dataset.ref_vars["torque"] = 2 * dataset.stdd['control_torque']
-    dataset.ref_vars["angle"] = 2 * dataset.stdd['error_ang']
-    dataset.ref_vars["ang_velocity"] = 2 * dataset.stdd['obs_ang_vel']
+    if not inp.translation_only:
+        dataset.ref_vars["torque"] = 2 * dataset.stdd['control_torque']
+        dataset.ref_vars["angle"] = 2 * dataset.stdd['error_ang']
+        dataset.ref_vars["ang_velocity"] = 2 * dataset.stdd['obs_ang_vel']
+    else:
+        dataset.ref_vars["torque"] = 0
+        dataset.ref_vars["angle"] = 0
+        dataset.ref_vars["ang_velocity"] = 0
     model = NeuralController(
         f"{inp.architecture}{inp.past_window}",
         2 if inp.translation_only else 3,
@@ -75,6 +82,7 @@ if __name__ == '__main__':
         # Training
         dataset.set_mode('training')
         training_loss = 0
+        n_batches = 0
         for i_minibatch, (x_present, x_past, y_local) in enumerate(dataloader):
             y_local = y_local.to(device)
             x_present, x_past = x_present.to(device), x_past.to(device)
@@ -94,10 +102,11 @@ if __name__ == '__main__':
                 export_counter += 1
             optimizer.zero_grad()
             lr_scheduler.step()
-            training_loss += local_loss.detach()
+            training_loss += local_loss.detach() * y_predict.shape[0]  # Eliminate mean computation for now
+            n_batches += y_predict.shape[0]
             # print(i_minibatch)
         epoch += 1
-        training_loss /= (i_minibatch + 1)
+        training_loss /= n_batches
         # Calculate time left
         current_time = time()
         steps_performed = i - previous_i
@@ -114,7 +123,7 @@ if __name__ == '__main__':
         dataset.set_mode('validation')
         with torch.no_grad():
             validation_loss = 0
-            dataset
+            n_batches = 0
             for i_minibatch, (x_present, x_past, y_local) in enumerate(dataloader):
                 y_local = y_local.to(device)
                 x_present, x_past = x_present.to(device), x_past.to(device)
@@ -126,8 +135,9 @@ if __name__ == '__main__':
                     x_past,
                     inp.bypass_tanh)
                 local_loss = calculate_loss(y_local, y_predict)
-                validation_loss += local_loss
-            validation_loss /= (i_minibatch + 1)
+                validation_loss += local_loss * y_predict.shape[0]
+                n_batches += y_predict.shape[0]
+            validation_loss /= n_batches
             # Log scalars
             writer.add_scalars(
                 'Loss',

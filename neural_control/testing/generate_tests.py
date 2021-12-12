@@ -12,7 +12,7 @@ if __name__ == "__main__":
     tests = dict(
         test1=dict(
             seed=900,
-            initial_conditions_path="/home/ramos/phiflow/storage/baseline_simple_noinflow2/",
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_disc/",
             n_simulations=20,
             positions=lambda: ((randomGenerator.rand(2) * 40 + 20).tolist(),),
             help_i=lambda: [-1],
@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
         ),
         test2=dict(
-            initial_conditions_path="/home/ramos/phiflow/storage/baseline_simple_noinflow_smalldt/",
+            initial_conditions_path="/home/ramos/phiflow/storage/baseline_disc2/",
             n_simulations=1,
             help_i=lambda: -1,
             export_stride=lambda: 50,

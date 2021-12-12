@@ -144,7 +144,7 @@ class Interactive_Data_Reader(Tk):
 
         """
         self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=0)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         # Canva for input stuff
@@ -215,6 +215,8 @@ class Interactive_Data_Reader(Tk):
         self.axes = self.axes.reshape(-1)
         self.fig.tight_layout()
         self.display = FigureCanvasTkAgg(self.fig, master=self)  # A tk.DrawingArea.
+        self.display.get_tk_widget().grid_rowconfigure(1, weight=0)
+        self.display.get_tk_widget().grid_columnconfigure(1, weight=0)
         self.display.draw()
         self.display.get_tk_widget().grid(sticky="nsew", column=1, row=0)
         self.toolbar = NavigationToolbar2Tk(self.display, self, pack_toolbar=False)
@@ -721,7 +723,7 @@ class Interactive_Data_Reader(Tk):
             data_u = data_u_
             data_v = data_v_
             angle = data_angle_
-        offset = (offset * np.cos(-angle), offset * np.sin(-angle))  # Convert offset to x,y
+        offset = np.concatenate((offset * np.cos(-angle), offset * np.sin(-angle)))  # Convert offset to x,y
         kwargs.pop('offset', None)
         kwargs.pop('angle', None)
         kwargs.pop('u', None)
@@ -753,7 +755,7 @@ class Interactive_Data_Reader(Tk):
         axis = self.sAxis[i].get()
         snapshot = self.snapshot
         filepath_xy, allframes_xy = self.get_filepath(var, case, snapshot, allframes=True)
-        filepath_angle, allframes_angle = self.get_filepath(kwargs['angle'], snapshot, case, allframes=True)
+        filepath_angle, allframes_angle = self.get_filepath(kwargs['angle'], case, snapshot, allframes=True)
         filepath_torque, allframes_torque = self.get_filepath(kwargs['torque'], case, snapshot, allframes=True)
         allframes = allframes_xy and allframes_angle and allframes_torque
         data_xy_ = np.load(filepath_xy)
