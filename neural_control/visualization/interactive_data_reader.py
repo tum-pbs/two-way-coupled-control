@@ -149,9 +149,10 @@ class Interactive_Data_Reader(Tk):
         self.grid_columnconfigure(1, weight=1)
         # Canva for input stuff
         clicks = Canvas(self, bg="white")
-        for i in range(0, self.nMaxLoadedVariables + 10):
+        for i in range(1, self.nMaxLoadedVariables + 10):
             clicks.grid_columnconfigure(i, weight=1)
             clicks.grid_rowconfigure(i, weight=1)
+        clicks.grid_rowconfigure(0, weight=0)
         # clicks.config(highlightbackground="black")
         # clicks.pack(side=LEFT, expand=False, padx=30, pady=30, fill=BOTH)
         clicks.grid(sticky="nsew", row=0, column=0, padx=30, pady=30)

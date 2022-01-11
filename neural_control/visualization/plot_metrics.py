@@ -13,15 +13,35 @@ import numpy as np
 from Plotter import Plotter
 import matplotlib.pyplot as plt
 
+plt.rcParams['font.family'] = 'Times New Roman'
+plt.rcParams['text.usetex'] = True
+
 hatches = cycle(['/', '\\', '|', '-', '+', 'x', '.'])
+colors_hash = dict(
+    Online='#1f77b4',
+    PID='#ff7f0e',
+    Supervised='#2ca02c',
+    LS='#d62728',
+    RL='#9467bd',
+)
+colors_hash['Seed 1'] = colors_hash['Online']
+colors_hash['Seed 2'] = colors_hash['PID']
+colors_hash['Seed 3'] = colors_hash['Supervised']
+colors_hash['Seed 4'] = colors_hash['LS']
 x_scale_factor = dict(
     test1=0.1,
     test2=0.05,
+    test3=0.1,
+    test4=0.05,
+    test5=0.05,
+    test6=0.05
 )
 # Load figs json
 with open(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + '/figs.json'), 'r') as f:
     figs_attrs = json.load(f)
 # Update figs_attrs to contain only requested figs
+plt.rcParams.update({'font.size': figs_attrs['global']['font_size']})
+plt.rc('legend', fontsize=figs_attrs['global']['font_size_legend'])
 parser = argparse.ArgumentParser(description='Plot metrics')
 parser.add_argument('--figs', type=str, nargs='+', required=False, default=None)  # Default is to plot all figs
 figs_to_plot = parser.parse_args().figs
@@ -57,6 +77,9 @@ for fig_name, attrs in loop_dict.items():
                 metric_name = params['name']
                 value = np.squeeze(metrics[metric_name])
                 label = f"{run_label}_{model_id}_/{metric_name}"
+                if len(value.shape) == 1:
+                    x = np.arange(value.shape[0]) * x_scale_factor[test.split("_")[0]]
+                    value = [x, value]
                 p.add_data([value], [label])
                 stdd[label] = metrics[metric_name + "_stdd"]
                 data_ids.append(label)
@@ -70,7 +93,7 @@ for fig_name, attrs in loop_dict.items():
     colors = {}
     run_models = [id.split("_/")[0] for id in data_ids]
     run_models = list(OrderedDict.fromkeys(run_models))  # Remove duplicates
-    colors_hash = {run_model: next(p.colors) for run_model in run_models}
+    # colors_hash = {run_model: next(p.colors) for run_model in run_models}
     for id in data_ids:
         if any([metric in id for metric in exclude]): continue
         for run_model, color in colors_hash.items():
@@ -94,7 +117,11 @@ for fig_name, attrs in loop_dict.items():
             kwargs = args.pop('kwargs')
             args['colors'] = colors
             args['data_ids'] = [id for id in data_ids if run_label in id and params['name'] == id.split("/")[1]]
-            _, fig, _ = func(**args, **kwargs)
+            _, fig, ax = func(**args, **kwargs)
+    ylabel = attrs.get('ylabel', '')
+    xlabel = attrs.get('xlabel', '')
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel(xlabel)
     p.remove_repeated_labels(fig_name)
     p.set_export_path(figs_attrs['global']['export_path'])
     p.export(fig, fig_name)

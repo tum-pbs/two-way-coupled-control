@@ -22,7 +22,7 @@ if __name__ == "__main__":
     run_path = args.runpaths
     tests_id = [f"test{i}" for i in args.tests_id]
     # Load inputs
-    inp = InputsManager(os.path.abspath(run_path + "/inputs.json"), exclude=["simulation"])
+    inp = InputsManager(os.path.abspath(run_path + "/inputs.json"))
     # Set model type
     if "online" in inp.__dict__.keys(): model_type = "online"
     elif "supervised" in inp.__dict__.keys(): model_type = "supervised"
@@ -39,6 +39,7 @@ if __name__ == "__main__":
     model_path = f"{run_path}/trained_model_{model_id:04d}.pth"
     tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), tests_id)  # TODO currently running only test1
     print(f"\n\n Running tests on model {model_path}")
+    # max_error_xy = torch.as_tensor(200)
     for test_label, test in tests.__dict__.items():  # Loop through tests
         # ----------------------------------------------
         # ---------------- Setup simulation ------------
@@ -144,7 +145,18 @@ if __name__ == "__main__":
                     sim.calculate_fluid_forces()
                     # Control
                     if i % sampling_stride == 0:
-                        nn_inputs_present, loss_inputs = extract_inputs(inp.nn_vars, sim, probes, x_objective, ang_objective, ref_vars, inp.translation_only)
+                        nn_inputs_present, loss_inputs = extract_inputs(
+                            inp.nn_vars,
+                            sim,
+                            probes,
+                            x_objective,
+                            ang_objective,
+                            ref_vars,
+                            inp.translation_only,
+                            # clamp={'error_x': max_error_xy, 'error_y': max_error_xy}
+                        )
+                        nn_inputs_present[..., 2:4] = torch.clamp(nn_inputs_present[..., 2:4], -20 / ref_vars['length'], 20 / ref_vars['length'])  # TODO
+                        nn_inputs_present[..., 5:6] = torch.clamp(nn_inputs_present[..., 5:6], -3.14 / ref_vars['length'], 3.14 / ref_vars['length'])  # TODO
                         if model_type == "rl":
                             rl_inp.add_snapshot(nn_inputs_present.view(1, -1))
                             # if i % inp.rl['n_snapshots_per_window'] == 0:
@@ -152,6 +164,8 @@ if __name__ == "__main__":
                         else:
                             control_effort = model(nn_inputs_present.view(1, -1), nn_inputs_past.view(1, -1) if inp.past_window else None, inp.bypass_tanh)
                             # control_effort = torch.clamp(control_effort, -2., 2.)
+                        # Warmup
+                        if i < inp.past_window * sampling_stride: control_effort = torch.zeros_like(control_effort)
                         control_force = control_effort[0, :2]
                         control_force_global = control_force
                         if not inp.translation_only:
@@ -207,6 +221,7 @@ if __name__ == "__main__":
                         remaining_h = np.floor(remaining / 60. / 60.)
                         remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
                         print(f"Time left: {remaining_h:.0f}h and {remaining_m:.0f} min")
+                    # export_vars = ['vorticity', 'obs_mask', 'obs_xy', 'control_force_x', 'control_force_y', 'fluid_force_x', 'fluid_force_y', 'reference_x', 'reference_y', 'error_x', 'error_y', ]
                     sim.export_data(export_path, test_i, i, export_vars, is_first_export)
                     is_first_export = False
     print("Done")

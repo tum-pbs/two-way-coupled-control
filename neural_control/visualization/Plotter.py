@@ -252,10 +252,11 @@ class Plotter():
             # Y scale
             if ylog: ax.set_yscale('log')
             # Fill between (working only with 1D)
-            if fill_between is not None and data['dim'] == '1D':
+            if fill_between is not None and data['dim'] in ['1D', '2D']:
                 offset = fill_between[id]['offset']
                 color = ma.colorAlpha_to_rgb([line[0].get_color()], fill_between[id]['kwargs'].pop('alpha', 1))[0]  # Hack to simulate transparency
-                ax.fill_between(line[0].get_xdata(), data['values'] - offset, data['values'] + offset, color=color, **fill_between[id]['kwargs'])
+                values = data['values'] if data['dim'] == '1D' else data['values'][1]
+                ax.fill_between(line[0].get_xdata(), values - offset, values + offset, color=color, **fill_between[id]['kwargs'])
             export_filename_ = id if export_filename is None else export_filename
             if self.should_export:
                 self.export(fig, export_filename_)

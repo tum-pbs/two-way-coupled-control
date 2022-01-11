@@ -106,13 +106,17 @@ def remove_repeated(x: np.array, y: np.array = None, normalizing_factor: float =
     return (out,), ('',)
 
 
-def execute(run_path):
+def execute(run_path, rotation_metrics=True):
     """
     Calculate all metrics
     """
     metrics = dict(
         general_error_xy=dict(
             vars=['error_x', 'error_y'],
+            func=calculate_error,
+        ),
+        general_error_ang=dict(
+            vars=['error_ang'],
             func=calculate_error,
         ),
         stopping_error_xy=dict(
@@ -133,11 +137,15 @@ def execute(run_path):
         ),
         angle=dict(
             vars=["obs_ang"],
-            func=lambda alpha: ((alpha.swapaxes(1, 2),), ('',)),
+            func=lambda alpha: ((-alpha.swapaxes(1, 2),), ('',)),
+        ),
+        torque=dict(
+            vars=["control_torque"],
+            func=calculate_error,
         ),
         objective_angle=dict(
             vars=["reference_ang"],
-            func=lambda alpha: ((alpha.swapaxes(1, 2),), ('',)),
+            func=lambda alpha: ((-alpha.swapaxes(1, 2),), ('',)),
         ),
         x=dict(
             vars=["obs_xy"],
@@ -170,6 +178,8 @@ def execute(run_path):
         # Loop through metrics
         export_dict = {}
         for metric_name, attrs in metrics.items():
+            if not rotation_metrics and ('angle' in metric_name or 'torque' in metric_name):
+                continue
             vars = attrs['vars']
             func = attrs['func']
             values_all = collections.defaultdict(list)
@@ -179,7 +189,10 @@ def execute(run_path):
                     try:
                         values = np.load(os.path.abspath(f"{datapath}/{var}/{var}_case{case}.npy"))
                     except FileNotFoundError:
-                        print(f"\n Could not load {var} for case {case} in {datapath}. Make sure frames are grouped correctly. \n")
+                        print(f"\n Could not find {var}_case {case}. Skipping...")
+                        break
+                    except:
+                        print(f"\n Something wrong when loading {var} case {case}.")
                         exit()
                     values_all[var] += [values]
                 values_all[var] = np.asarray(values_all[var])
