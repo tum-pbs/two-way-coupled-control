@@ -39,7 +39,6 @@ if __name__ == "__main__":
     model_path = f"{run_path}/trained_model_{model_id:04d}.pth"
     tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), tests_id)  # TODO currently running only test1
     print(f"\n\n Running tests on model {model_path}")
-    # max_error_xy = torch.as_tensor(200)
     for test_label, test in tests.__dict__.items():  # Loop through tests
         # ----------------------------------------------
         # ---------------- Setup simulation ------------
@@ -156,9 +155,8 @@ if __name__ == "__main__":
                             # clamp={'error_x': max_error_xy, 'error_y': max_error_xy}
                         )
                         if model_type == "rl":
-                            rl_inp.add_snapshot(nn_inputs_present.view(1, -1))
-                            # if i % inp.rl['n_snapshots_per_window'] == 0:
-                            control_effort = model(rl_inp.values.view(1, -1))
+                            inputs = torch.cat([nn_inputs_past.view(1, -1), nn_inputs_present.view(1, -1)], dim=1)
+                            control_effort = model(inputs)
                         else:
                             control_effort = model(nn_inputs_present.view(1, -1), nn_inputs_past.view(1, -1) if inp.past_window else None, inp.bypass_tanh)
                         # Warmup
@@ -169,19 +167,7 @@ if __name__ == "__main__":
                             angle_tensor = -(sim.obstacle.geometry.angle - math.PI / 2.0).native()
                             control_force_global = rotate(control_force_global, angle_tensor)
                             control_torque = control_effort[0, -1:]
-                        #     control_force2 = control_effort[0, 2:] * torch.as_tensor((0, 1)).cuda()  # TODO
-                        #     control_force_global2 = rotate(control_force2, angle_tensor)  # Control force at global reference of frame (used for visualization only)
-
-                        # Use ground truth values from dataset if needed
-                        # if i < test_attrs['help_i'] and inp.translation_only:
-                        #     if i < inp.past_window:
-                        #         _, gt_inputs_past, _, indexes = dataset.get_values_by_case_snapshot(test_i, [inp.past_window])
-                        #         control_force_global = gt_inputs_past[0][[[indexes["control_force_x"][i], indexes["control_force_y"][i]]]]
-                        #     else:
-                        #         gt_inputs_present, gt_inputs_past, gt_force, indexes = dataset.get_values_by_case_snapshot(test_i, [i])
-                        #         control_force_global = gt_force.view(-1)
-                        if model_type in ["supervised", "online"]:
-                            nn_inputs_past = update_inputs(nn_inputs_past, nn_inputs_present, control_effort)
+                        nn_inputs_past = update_inputs(nn_inputs_past, nn_inputs_present, control_effort)
                     # Stop simulation if obstacle escapes domain
                     if math.any(sim.obstacle.geometry.center > inp.simulation['domain_size']) or math.any(sim.obstacle.geometry.center < (0, 0)):
                         break
@@ -217,7 +203,7 @@ if __name__ == "__main__":
                         remaining = i_remaining * delta
                         remaining_h = np.floor(remaining / 60. / 60.)
                         remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
-                        print(f"Time left: {remaining_h:.0f}h and {remaining_m:.0f} min")
+                        print(f"Time left: {remaining_h:.0f}h and {remaining_m:.0f} min - i: {i}")
                     # export_vars = ['vorticity', 'obs_mask', 'obs_xy', 'control_force_x', 'control_force_y', 'fluid_force_x', 'fluid_force_y', 'reference_x', 'reference_y', 'error_x', 'error_y', ]
                     sim.export_data(export_path, test_i, i, export_vars, is_first_export)
                     is_first_export = False

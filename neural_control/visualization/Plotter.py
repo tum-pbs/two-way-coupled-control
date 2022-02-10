@@ -470,18 +470,20 @@ class Plotter():
     def show(self, block=True):
         plt.show(block=block)
 
-    def remove_repeated_labels(self, plot_id: str):
+    def remove_repeated_labels(self, plot_id: str, **kwargs):
         """
         Remove repeated labels from legend
 
         Params:
             plot_id: id of plot which will be modified
+            kwargs: kwargs for legend
 
         """
         _, ax = self.check_plot_id(plot_id)
         handles, labels = ax.get_legend_handles_labels()
         legend_dict = dict(zip(labels, handles))
-        ax.legend(legend_dict.values(), legend_dict.keys())
+        if legend_dict: return ax.legend(legend_dict.values(), legend_dict.keys(), **kwargs)
+        else: return None
 
 
 if __name__ == '__main__':

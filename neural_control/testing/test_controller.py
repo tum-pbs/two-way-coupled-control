@@ -181,7 +181,7 @@ if __name__ == "__main__":
                         remaining = i_remaining * delta
                         remaining_h = np.floor(remaining / 60. / 60.)
                         remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
-                        print(f"Time left: {remaining_h:.0f}h and {remaining_m:.0f} min")
+                        print(f"Time left: {remaining_h:.0f}h and {remaining_m:.0f} min - i: {i}")
                         export_vars_ = export_vars
                     sim.export_data(export_path, test_i, i, export_vars_, is_first_export)
                     is_first_export = False

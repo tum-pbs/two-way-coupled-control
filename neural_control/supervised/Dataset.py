@@ -230,7 +230,7 @@ class Dataset(torch.utils.data.Dataset):
         labels_ = []
         inputs_past_ = []
         inputs_present_ = []
-        assert isinstance(snapshots, list)
+        # assert isinstance(snapshots, list)
         if not snapshots: snapshots = range(self.n_snapshots)
         for i in snapshots:
             data = self.__getitem__(i + case * self.n_snapshots, True)
@@ -243,8 +243,8 @@ class Dataset(torch.utils.data.Dataset):
         inputs_past = inputs_past_[0].view(1, -1)
         labels = labels_[0].view(1, -1)
         for input_present, input_past, label in zip(inputs_present_[1:], inputs_past_[1:], labels_[1:]):
-            inputs_present = torch.cat((input_present, input_present.view(1, -1)))
-            inputs_past = torch.cat((input_past, input_past.view(1, -1)))
+            inputs_present = torch.cat((inputs_present, input_present.view(1, -1)))
+            inputs_past = torch.cat((inputs_past, input_past.view(1, -1)))
             labels = torch.cat((labels, label.view(1, -1)))
         return inputs_present.cuda(), inputs_past.cuda(), labels.cuda(), indexes
 
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     from InputsManager import InputsManager
     inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", exclude=["online", "simulation"])
     label_vars = [var for var in inp.nn_vars if 'control' in var]
-    dataset = Dataset('/home/ramos/phiflow/storage/dataset_disc/', inp.supervised['tvt_ratio'], inp.nn_vars, label_vars, local=inp.supervised['local_coordinates'])
+    dataset = Dataset('/home/ramos/phiflow/storage/dataset_box_local_bigger/', inp.supervised['tvt_ratio'], inp.nn_vars, label_vars, local=inp.supervised['local_coordinates'])
     dataset.set_mode('training')
     dataset.set_past_window_size(3)
     dataset.update()

@@ -40,8 +40,8 @@ class NeuralController(nn.Module):
             self.layers += [nn.Linear(n_out2, n_outputs)]
         if id == 'fc_only3':
             self.layers = nn.ModuleList()
-            n_out1 = 31
-            n_out2 = 31
+            n_out1 = 32
+            n_out2 = 32
             self.layers += [nn.Linear(n_present_features + n_past_features * past_window, n_out1)]
             self.layers += [nn.Linear(n_out1, n_out2)]
             self.layers += [nn.Linear(n_out2, n_outputs)]

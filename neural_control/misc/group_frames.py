@@ -17,7 +17,6 @@ def group_frames(data_dir):
             try:
                 first_snapshot = np.load(data_dir + variable + "/" + files_to_load[0])
             except ValueError:
-                print(f"\n\n   Problem with {variable} case {case}. Skipping \n\n")
                 continue
             shape = first_snapshot.shape
             if shape == (): shape = (1,)

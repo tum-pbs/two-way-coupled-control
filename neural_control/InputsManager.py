@@ -27,7 +27,7 @@ class InputsManager():
             inputs = json.load(f)
         for key, value in inputs.items():
             if only:
-                if isinstance(value, dict) and not any(string in key for string in only): continue
+                if isinstance(value, dict) and not any(string == key for string in only): continue
             if exclude:
                 if any(string in key for string in exclude): continue
             setattr(self, key, value)

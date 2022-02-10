@@ -12,6 +12,7 @@ if __name__ == "__main__":
     # ----------------------------------------------
     # -------------------- Inputs ------------------
     # ----------------------------------------------
+    seed = 100
     inp = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json"), ['online'])
     inp.calculate_properties()
     inp.add_values(os.path.abspath(inp.online['simulation_path'] + 'inputs.json'), ["probes", "simulation"])  # Load simulation inputs
@@ -61,6 +62,7 @@ if __name__ == "__main__":
         model = torch.load(inp.export_path + model_file[-1])
     else:
         first_case = 0
+        torch.manual_seed(seed)
         model = NeuralController(
             f"{inp.architecture}{inp.past_window}",
             2 if inp.translation_only else 3,  # TODO
@@ -68,7 +70,7 @@ if __name__ == "__main__":
             inp.n_present_features,
             inp.n_past_features,
             inp.past_window)
-    torch.manual_seed(999)
+    torch.manual_seed(seed + 1)
     model.to(device)
     print("Model's state_dict:")
     for param_tensor in model.state_dict():
@@ -92,7 +94,7 @@ if __name__ == "__main__":
     n_simulations = ceil(n_simulations / inp.online["simulation_dropout"]) * 2  # Add double the amount necessary just in case some dont converge
     # Gradually increase objectives distances
     # Create objectives
-    torch.manual_seed(900)
+    torch.manual_seed(seed + 2)
     xy = torch.rand(2, n_simulations)
     ang = torch.rand(n_simulations)
     for case in range(n_simulations):

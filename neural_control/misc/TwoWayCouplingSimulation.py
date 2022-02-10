@@ -396,7 +396,7 @@ class TwoWayCouplingSimulation:
         lower = torch.as_tensor([xy[0] - width / 2, xy[1] - height / 2]).to(self.device)
         upper = torch.as_tensor([xy[0] + width / 2, xy[1] + height / 2]).to(self.device)
         geometry = Box(lower, upper)
-        self.additional_obs += [Obstacle(geometry, angular_velocity=torch.tensor(ang_vel).to(self.device)), ]
+        self.additional_obs = [Obstacle(geometry, angular_velocity=torch.tensor(ang_vel).to(self.device)), ]
 
     def export_data(self, path: str, case: int, step: int, ids: tuple = None, delete_previous=True):
         """

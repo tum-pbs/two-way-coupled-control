@@ -34,7 +34,8 @@ def extract_inputs(
     x_objective: tuple,
     angle_objective: tuple,
     ref_vars: dict = None,
-    translation_only: bool = False
+    translation_only: bool = False,
+    clamp: dict = {},
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """
     Extract inputs that will be used on network model
@@ -47,7 +48,7 @@ def extract_inputs(
         angle_objective: angle that the box should go to
         ref_vars: reference variables for non dimensionalizing/normalizing inputs
         translation_only: if true then inputs that are related with rotation will not be gathered
-        var:
+        clamp: dictionary of clamp values for each variable
 
     Returns:
         model_inputs: tensor containing inputs for model
@@ -91,6 +92,8 @@ def extract_inputs(
     inputs = OrderedDict()
     for var in vars:
         value = getter[var]()
+        if clamp.get(var, None):
+            value = torch.clamp(value, -clamp[var], clamp[var])
         if value is not None: inputs[var] = value / ref_vars[ref_vars_hash[var]]
     # Rotate vector variables
     negative_angle = (sim.obstacle.geometry.angle - math.PI / 2.0).native()

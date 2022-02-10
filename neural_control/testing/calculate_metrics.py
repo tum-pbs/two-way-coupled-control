@@ -2,7 +2,6 @@ from cProfile import label
 import json
 import collections
 import numpy as np
-from InputsManager import InputsManager
 import os
 from natsort import natsorted
 import argparse
@@ -106,7 +105,7 @@ def remove_repeated(x: np.array, y: np.array = None, normalizing_factor: float =
     return (out,), ('',)
 
 
-def execute(run_path, rotation_metrics=True):
+def execute(run_path, metrics_keys=None, tests=None, rotation_metrics=True):
     """
     Calculate all metrics
     """
@@ -125,6 +124,7 @@ def execute(run_path, rotation_metrics=True):
         ),
         force=dict(
             vars=['control_force_x', 'control_force_y'],
+            # func=lambda xy: ((xy.swapaxes(1, 2),), ('',)),
             func=calculate_error,
         ),
         trajectory=dict(
@@ -147,6 +147,10 @@ def execute(run_path, rotation_metrics=True):
             vars=["reference_ang"],
             func=lambda alpha: ((-alpha.swapaxes(1, 2),), ('',)),
         ),
+        objective_angle_points=dict(
+            vars=["reference_ang"],
+            func=remove_repeated
+        ),
         x=dict(
             vars=["obs_xy"],
             func=lambda xy: ((xy[..., 0:1].swapaxes(1, 2),), ('',)),
@@ -165,10 +169,14 @@ def execute(run_path, rotation_metrics=True):
         )
     )
 
-    # run_path = root + run_folder
+    if not metrics_keys: metrics_keys = list(metrics.keys())
     # Pre process variables
-    tests = os.listdir(os.path.abspath(run_path + "/tests/"))
-    tests = [test for test in tests if 'test' in test]  # TODO only calculating metrics for one test
+    tests_folders = os.listdir(os.path.abspath(run_path + "/tests/"))
+    if tests:
+        tests = [test for test in tests_folders if any([(test_ in test) for test_ in tests])]
+    else:
+        tests = os.listdir(os.path.abspath(run_path + "/tests/"))
+        tests = [test for test in tests if 'test' in test]  # TODO only calculating metrics for one test
     for test in tests:
         datapath = f"{run_path}/tests/{test}/data/"
         # Get files cases
@@ -177,9 +185,10 @@ def execute(run_path, rotation_metrics=True):
         cases = natsorted(tuple(set([file.split("case")[1][:4] for file in all_files])))
         # Loop through metrics
         export_dict = {}
-        for metric_name, attrs in metrics.items():
+        for metric_name in metrics_keys:
             if not rotation_metrics and ('angle' in metric_name or 'torque' in metric_name):
                 continue
+            attrs = metrics[metric_name]
             vars = attrs['vars']
             func = attrs['func']
             values_all = collections.defaultdict(list)
@@ -209,6 +218,10 @@ def execute(run_path, rotation_metrics=True):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Calculate metrics from test simulations')
     parser.add_argument("run_path", help="Paths to folders containing model data")
+    parser.add_argument("--metrics", help="Which metrics will be computed", nargs='+', default=None)
+    parser.add_argument("--tests", help="Tests that will be used to calculate metrics", nargs='+', default=None)
     args = parser.parse_args()
     runs_path = args.run_path
-    execute(runs_path)
+    metrics = args.metrics
+    tests = args.tests
+    execute(runs_path, rotation_metrics=False, metrics_keys=metrics, tests=tests)

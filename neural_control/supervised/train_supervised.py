@@ -25,7 +25,7 @@ def calculate_loss(y, y_predict):
 
 
 if __name__ == '__main__':
-
+    seed = 10
     parser = argparse.ArgumentParser(description='Train nn in an online setting')
     parser.add_argument("export_path", help="data will be saved in this path")
     args = parser.parse_args()
@@ -53,6 +53,7 @@ if __name__ == '__main__':
         dataset.ref_vars["torque"] = 0
         dataset.ref_vars["angle"] = 0
         dataset.ref_vars["ang_velocity"] = 0
+    torch.manual_seed(seed)
     model = NeuralController(
         f"{inp.architecture}{inp.past_window}",
         2 if inp.translation_only else 3,
