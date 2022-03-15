@@ -5,7 +5,7 @@ import numpy as np
 import os
 from natsort import natsorted
 import argparse
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 # colors = cycle(plt.rcParams["axes.prop_cycle"].by_key()["color"])
 
 
@@ -23,9 +23,9 @@ def calculate_variability(y: np.array, y_additional: np.array = 0, normalizing_f
     return (np.mean(np.abs(values[1:] - values[:-1])),), ('',)
 
 
-def calculate_error(x: np.array, y: np.array = 0, normalizing_factor: float = 1):
+def calculate_norm(x: np.array, y: np.array = 0, normalizing_factor: float = 1):
     """
-    Calculate mena spatial error from x and y components and its standard deviation
+    Calculate mean spatial error from x and y components and its standard deviation
 
     Params:
         x: x component of error
@@ -37,15 +37,16 @@ def calculate_error(x: np.array, y: np.array = 0, normalizing_factor: float = 1)
         labels: labels of outputs
 
     """
-    error = np.sqrt(x**2 + y**2) / normalizing_factor
-    sigma = np.std(error, axis=0)
-    error = np.mean(error, axis=0)
-    return (error, sigma), ('', '_stdd')
+    z = np.sqrt(x**2 + y**2) / normalizing_factor
+    sigma = np.std(z, axis=0)
+    z = np.mean(z, axis=0)
+    return (z, sigma), ('', '_stdd')
 
 
-def calculate_stopping_error(x: np.array, y: np.array = 0, normalizing_factor: float = 1):
+def calculate_ss(x: np.array, reference_x: np.array, y: np.array = 0, reference_y: np.array = None, normalizing_factor: float = 1):
     """
-    Mean error of the last 40% of the trajectory
+    Steady steady error calculated by averaging error without considering the first
+    25% of the trajectory after an objective is set.
 
     Params:
         x: x component of error
@@ -57,13 +58,28 @@ def calculate_stopping_error(x: np.array, y: np.array = 0, normalizing_factor: f
         labels: labels of outputs
 
     """
-    error = np.sqrt(x**2 + y**2) / normalizing_factor
-    sigma = np.std(error, axis=0)
-    mean_error = np.mean(error, axis=0)
-    index = int(len(mean_error) * 0.40)
-    last_mean_error = np.mean(mean_error[index:])
-    last_sigma = np.mean(sigma[index:])
-    return (last_mean_error, last_sigma), ('', '_stdd')
+    if reference_y is None: objectives = reference_x
+    else: objectives = np.concatenate((reference_x, reference_y), axis=-1)
+    # Find number of sections in which a new objective is set
+    objective_changes = np.linalg.norm(objectives[:, 1:, :] - objectives[:, :-1:], axis=-1) > 1e-6
+    n_sections = 1
+    n_sections += np.size(np.where(objective_changes[0] == 1))
+    # Calculate the size of chunk of data that will be discarded
+    ss_i = 0.25
+    deleted_chunk_size = int(x.shape[1] / n_sections * ss_i)
+    section_size = int(x.shape[1] / n_sections)
+    delete_i = [k * section_size for k in range(n_sections)]
+    delete_i_all = []
+    for k in delete_i:
+        for l in range(deleted_chunk_size):
+            delete_i_all.append(k + l)
+    z = np.sqrt(x**2 + y**2) / normalizing_factor
+    z = np.delete(z, delete_i_all, axis=1)
+    mean = np.mean(z, axis=0)
+    # Average all tests
+    std = np.std(mean)
+    mean = np.mean(mean)
+    return (mean, std), ('', '_stdd')
 
 
 def calculate_mean(x: np.array, y: np.array = 0, normalizing_factor: float = 1):
@@ -110,28 +126,32 @@ def execute(run_path, metrics_keys=None, tests=None, rotation_metrics=True):
     Calculate all metrics
     """
     metrics = dict(
-        general_error_xy=dict(
+        error_xy=dict(
             vars=['error_x', 'error_y'],
-            func=calculate_error,
+            func=calculate_norm,
         ),
-        general_error_ang=dict(
+        error_ang=dict(
             vars=['error_ang'],
-            func=calculate_error,
+            func=calculate_norm,
         ),
-        stopping_error_xy=dict(
-            vars=['error_x', 'error_y'],
-            func=calculate_stopping_error,
+        ss_error_xy=dict(
+            vars=['error_x', "reference_x", 'error_y', "reference_y"],
+            func=calculate_ss,
         ),
-        force=dict(
+        ss_error_ang=dict(
+            vars=['error_ang', "reference_ang"],
+            func=calculate_ss,
+        ),
+        forces_norm=dict(
             vars=['control_force_x', 'control_force_y'],
             # func=lambda xy: ((xy.swapaxes(1, 2),), ('',)),
-            func=calculate_error,
+            func=calculate_norm,
         ),
         trajectory=dict(
             vars=["obs_xy"],
             func=lambda xy: ((xy.swapaxes(1, 2),), ('',)),
         ),
-        objective_xy_points=dict(
+        objective_xy=dict(
             vars=["reference_x", "reference_y"],
             func=remove_repeated
         ),
@@ -139,44 +159,25 @@ def execute(run_path, metrics_keys=None, tests=None, rotation_metrics=True):
             vars=["obs_ang"],
             func=lambda alpha: ((-alpha.swapaxes(1, 2),), ('',)),
         ),
-        torque=dict(
+        torque_norm=dict(
             vars=["control_torque"],
-            func=calculate_error,
+            func=calculate_norm,
         ),
         objective_angle=dict(
             vars=["reference_ang"],
-            func=lambda alpha: ((-alpha.swapaxes(1, 2),), ('',)),
-        ),
-        objective_angle_points=dict(
-            vars=["reference_ang"],
             func=remove_repeated
         ),
-        x=dict(
-            vars=["obs_xy"],
-            func=lambda xy: ((xy[..., 0:1].swapaxes(1, 2),), ('',)),
-        ),
-        objective_x=dict(
-            vars=["reference_x"],
-            func=lambda x: ((x.swapaxes(1, 2),), ('',)),
-        ),
-        y=dict(
-            vars=["obs_xy"],
-            func=lambda xy: ((xy[..., 1:2].swapaxes(1, 2),), ('',)),
-        ),
-        objective_y=dict(
-            vars=["reference_y"],
-            func=lambda y: ((y.swapaxes(1, 2),), ('',)),
-        )
     )
 
     if not metrics_keys: metrics_keys = list(metrics.keys())
-    # Pre process variables
+    # Gather test folders
     tests_folders = os.listdir(os.path.abspath(run_path + "/tests/"))
     if tests:
         tests = [test for test in tests_folders if any([(test_ in test) for test_ in tests])]
     else:
         tests = os.listdir(os.path.abspath(run_path + "/tests/"))
-        tests = [test for test in tests if 'test' in test]  # TODO only calculating metrics for one test
+        tests = [test for test in tests if 'test' in test]
+    # Loop through tests and calculate metrics
     for test in tests:
         datapath = f"{run_path}/tests/{test}/data/"
         # Get files cases
@@ -192,12 +193,12 @@ def execute(run_path, metrics_keys=None, tests=None, rotation_metrics=True):
             vars = attrs['vars']
             func = attrs['func']
             values_all = collections.defaultdict(list)
-            # Load data
             for var in vars:
                 for case in cases:
                     try:
                         values = np.load(os.path.abspath(f"{datapath}/{var}/{var}_case{case}.npy"))
                     except FileNotFoundError:
+                        values_all[var] = np.zeros((1, 2, 1))
                         print(f"\n Could not find {var}_case {case}. Skipping...")
                         break
                     except:
