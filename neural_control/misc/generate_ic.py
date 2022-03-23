@@ -50,7 +50,6 @@ if __name__ == "__main__":
         )
     with torch.no_grad():
         for i in range(initial_i, inp.simulation['n_steps']):
-            # simulation.inflow_velocity = inp.simulation['inflow_velocity']  # * min((i / 500., 1.))  # Gradually increase inflow velocity
             simulation.advect(inp.simulation["tripping_on"])
             simulation.make_incompressible()
             simulation.calculate_fluid_forces()

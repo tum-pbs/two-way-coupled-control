@@ -1,66 +1,59 @@
 {
-    "translation_only": false,
+    "translation_only": true,
     "architecture": "fc_only",
-    "past_window": 3,
+    "past_window": 2,
     "resume_training": false,
     "export_stride": 50,
-    "max_acc": 1.0,
+    "max_acc": 1,
     "max_ang_acc": 0.05,
     "device": "GPU",
-    "probes_n_rows": 2,
-    "probes_n_columns": 3,
-    "probes_offset": 4,
-    "probes_size": 4,
     "bypass_tanh": false,
     "nn_vars": [
         "obs_vx",
         "obs_vy",
         "error_x",
         "error_y",
-        "obs_ang_vel",
-        "error_ang",
         "control_force_x",
-        "control_force_y",
-        "control_torque"
+        "control_force_y"
     ],
-    "online": {
-        "simulation_path": "/home/ramos/phiflow/storage/baseline_box/",
+    "unsupervised": {
+        "simulation_path": "/home/ramos/phiflow/storage/baseline_disc/",
         "destinations_zone_growrate": 0.33,
-        "n_timesteps": 1000,
         "simulation_dropout": 1.0,
-        "lr_half_life": 1000,
-        "n_iterations": 5001,
-        "learning_rate": 0.01,
-        "n_before_backprop": 16,
-        "model_export_stride": 500,
+        "n_timesteps": 1000,
+        "lr_half_life": 1500,
+        "n_iterations": 15001,
+        "model_export_stride": 1500,
+        "learning_rate": 0.0005,
+        "n_before_backprop": 8,
         "optimizer": "AdamW",
         "destinations_margins": [
-            50,
-            25
+            20,
+            20
         ],
         "hyperparams": {
             "spatial": 15,
             "velocity": 5,
             "force": 0.1,
-            "delta_force": 0.1,
-            "torque": 0.1,
-            "angle": 15,
-            "ang_velocity": 1,
-            "delta_torque": 0.1,
-            "proximity": 0.5
+            "delta_force": 0.0,
+            "angle": 30,
+            "torque": 0,
+            "ang_velocity": 0.2,
+            "delta_torque": 0.025,
+            "proximity": 0.1
         }
     },
     "supervised": {
-        "n_iterations": 200001,
-        "lr_half_life": 15000,
+        "n_iterations": 5001,
+        "lr_half_life": 500,
         "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_disc/",
         "learning_rate": 0.01,
-        "dataset_path": "/home/ramos/phiflow/storage/dataset_box_local/",
+        "dataset_path": "/home/ramos/phiflow/storage/dataset_disc/",
         "dataset_n_steps": 500,
-        "model_export_stride": 20000,
+        "model_export_stride": 500,
         "n_simulations": 100,
         "optimizer": "AdamW",
-        "local_coordinates": true,
+        "local_coordinates": false,
         "destinations_margins": [
             20,
             20
@@ -71,7 +64,7 @@
             0.0
         ],
         "dataloader_params": {
-            "batch_size": 15,
+            "batch_size": 30,
             "shuffle": true,
             "num_workers": 7
         }
@@ -116,16 +109,13 @@
     },
     "controller": {
         "ls_coeffs": [
-            "/home/ramos/phiflow/neural_control/controller_design/ls_coeffs_box_xy.json",
-            "/home/ramos/phiflow/neural_control/controller_design/ls_coeffs_box_angle.json"
+            "/home/ramos/phiflow/neural_control/controller_design/ls_coeffs_disc.json"
         ],
         "pid_coeffs": [
-            "/home/ramos/phiflow/neural_control/controller_design/gains_pid_box_xy.json",
-            "/home/ramos/phiflow/neural_control/controller_design/gains_pid_box_angle.json"
+            "/home/ramos/phiflow/neural_control/controller_design/gains_pid_disc.json"
         ],
         "clamp_values": [
-            20,
-            0.5
+            20
         ]
     },
     "export_vars": [
@@ -140,9 +130,6 @@
         "control_force_y",
         "fluid_force_x",
         "fluid_force_y",
-        "probes_vx",
-        "probes_vy",
-        "probes_points",
         "reference_x",
         "reference_y",
         "loss",
@@ -154,11 +141,6 @@
         "loss_ang_vel",
         "vorticity",
         "cfl",
-        "fluid_torque",
-        "control_torque",
-        "obs_ang",
-        "obs_ang_vel",
-        "reference_ang",
-        "error_ang"
+        "fluid_torque"
     ]
 }

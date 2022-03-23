@@ -59,31 +59,15 @@ class NeuralController(nn.Module):
             self.layers += [nn.Linear(n_present_features + n_past_features * past_window, n_out1)]
             self.layers += [nn.Linear(n_out1, n_out2)]
             self.layers += [nn.Linear(n_out2, n_outputs)]
-            # for i in range(n_layers - 1):
-            #     self.layers += [nn.Linear(int((n_features) / (2**i)), int((n_features) / (2**(i + 1))))]
-            # self.layers += [nn.Linear(int((n_features) / (2**(i + 1))), n_outputs)]
 
     def forward(self, x_present, x_past=None, bypass_tanh=False) -> torch.Tensor:
-        # if 'lstm' in self.id:
-        #     l_past = self.past_layer(x_past)[0][-1:, :, :]  # Get last latent space of last cell
-        #     l_present = self.present_layer(x_present)
-        #     l_present = F.leaky_relu(l_present)
-        #     output = torch.cat((l_past, l_present), -1)[0]
-        #     for layer in self.output_layers[:-1]:
-        #         output = F.leaky_relu(layer(output))
-        #     output = self.output_layers[-1](output)
-        #     return output
         if 'fc' in self.id:
-            # x = torch.cat((x_past.view(-1), x_present.view(-1))).view(1, -1) if x_past is not None else x_present.view(1, -1)
-            # batch_size = x_present.shape[1]
-            # x_present = x_present.permute(1, 0, 2).view(batch_size, -1)
-            # x_past = x_past.permute(1, 0, 2).view(batch_size, -1)
-            x = torch.cat((x_past, x_present), dim=1).to(x_present.device) if x_past is not None else x_present.view(batch_size, -1)
+            x = torch.cat((x_past, x_present), dim=1).to(x_present.device) if x_past is not None else x_present.view(1, -1)
             for layer in self.layers[:-1]:
                 x = F.relu(layer(x))
             x = self.layers[-1](x)
             if not bypass_tanh:
-                x = torch.tanh(x)  # TODO
+                x = torch.tanh(x)
             return x
 
 

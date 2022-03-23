@@ -4,7 +4,7 @@ import argparse
 from Dataset import Dataset
 
 from InputsManager import InputsManager
-from Controller import Controller
+from LSController import LSController
 from PIDController import PIDController
 from misc_funcs import *
 CUDA_LAUNCH_BLOCKING = 1
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     inp = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json"), ["translation_only", "controller"])
     inp.controller['type'] = args.controller_type
     if inp.controller["type"] == "ls":
-        controller = Controller(inp.controller["ls_coeffs"])
+        controller = LSController(inp.controller["ls_coeffs"])
     elif inp.controller["type"] == "pid":
         controller = PIDController(inp.controller["pid_coeffs"], 0, inp.controller["clamp_values"])
     else: raise ValueError("Invalid controller type")
@@ -123,9 +123,7 @@ if __name__ == "__main__":
                         sim.add_smoke(xy, smoke_attrs['width'], smoke_attrs['height'], smoke_attrs['inflow'])
                     if "smoke" not in export_vars: export_vars.append("smoke")
                 control_force = torch.zeros(2).to(device)
-                # control_force2 = torch.zeros(2).to(device)  # TODO
                 control_force_global = torch.zeros(2).to(device)
-                # control_force_global2 = torch.zeros(2).to(device)  # TODO
                 control_torque = torch.zeros(1).to(device)
                 last_objective = test_attrs['positions'][0]
                 for i in range(test_attrs['n_steps']):
@@ -138,8 +136,7 @@ if __name__ == "__main__":
                     if last_objective != x_objective_:
                         last_objective = x_objective_
                         controller.reset()
-                    sim.apply_forces(control_force_global, control_torque)  # TODO
-                    # sim.apply_forces((control_force_global + control_force_global2) * ref_vars['force'], (control_force[1] - control_force2[1]) * inp.simulation["obs_width"] / 2 * ref_vars['force'])
+                    sim.apply_forces(control_force_global, control_torque)
                     sim.advect()
                     sim.make_incompressible()
                     sim.calculate_fluid_forces()
@@ -166,12 +163,10 @@ if __name__ == "__main__":
                     sim.reference_x = x_objective[0]
                     sim.reference_y = x_objective[1]
                     sim.error_x, sim.error_y = error_xy.native()
-                    # sim.error_x, sim.error_y = rotate(loss_inputs_present[0, :2] * ref_vars['length'], angle_tensor)
                     sim.control_force_x, sim.control_force_y = control_force_global
                     if not inp.translation_only:
                         sim.reference_ang = ang_objective
                         sim.error_ang = -error_ang.native()
-                        # sim.control_force_x2, sim.control_force_y2 = control_force_global2 * ref_vars['force']  # TODO
                         sim.control_torque = control_torque
                     # If not on stride just export scalar values
                     if (i % export_stride != 0):  # or (i < controller.past_window + 1):

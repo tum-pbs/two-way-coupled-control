@@ -6,35 +6,43 @@ import os
 from InputsManager import InputsManager
 from natsort.natsort import natsorted
 import numpy as np
-# import plotly.express as px
-# from PIL import ImageColor
-# import plotly.graph_objects as go
-# import plotly.io as pio
 from Plotter import Plotter
 import matplotlib.pyplot as plt
 
-plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams['text.usetex'] = True
+plt.rcParams['font.family'] = 'Times New Roman'
 
 hatches = cycle(['/', '\\', '|', '-', '+', 'x', '.'])
 colors_hash = dict(
-    Online='#1f77b4',
+    Diff='#1f77b4',
     PID='#ff7f0e',
-    Supervised='#2ca02c',
+    Sup='#2ca02c',
     LS='#d62728',
     RL='#9467bd',
+    Seed1='#1f77b4',
+    Seed2='#d62728',
+    Seed3='#2ca02c',
+    SupDoubleData='#d62728'
 )
-colors_hash['Seed 1'] = colors_hash['Online']
+colors_hash['Seed 1'] = colors_hash['Diff']
 colors_hash['Seed 2'] = colors_hash['PID']
-colors_hash['Seed 3'] = colors_hash['Supervised']
+colors_hash['Seed 3'] = colors_hash['Sup']
 colors_hash['Seed 4'] = colors_hash['LS']
+colors_hash['$l=4$'] = colors_hash['Sup']
+colors_hash['$l=8$'] = colors_hash['PID']
+colors_hash['$l=16$'] = colors_hash['Diff']
+colors_hash['$l=32$'] = colors_hash['LS']
 x_scale_factor = dict(
     test1=0.1,
     test2=0.05,
     test3=0.1,
     test4=0.05,
     test5=0.05,
-    test6=0.05
+    test6=0.05,
+    test7=0.05,
+    test8=0.05,
+    test9=0.05,
+    test10=0.05,
 )
 # Load figs json
 with open(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + '/figs.json'), 'r') as f:
@@ -53,11 +61,13 @@ if figs_to_plot is not None:
 loop_dict = {key: value for key, value in figs_attrs.items() if 'global' not in key}
 for fig_name, attrs in loop_dict.items():
     stdd = {}
-    p = Plotter((figs_attrs['global']['width'], figs_attrs['global']['height']))
+    width = attrs.get('width', figs_attrs['global']['width'])
+    height = attrs.get('height', figs_attrs['global']['height'])
+    p = Plotter((width, height))
     data_ids = []
     for run_label, run_path in attrs['runs'].items():
         # Pre process variables
-        tests = natsorted([test for test in os.listdir(run_path + '/tests') if attrs['test'] in test])
+        tests = natsorted([test for test in os.listdir(run_path + '/tests') if test.split("_")[0] == attrs['test']])
         for test in tests:
             # If not requested, only last model will be plotted
             if not attrs.get('all_models'): model_id = ''
@@ -122,7 +132,10 @@ for fig_name, attrs in loop_dict.items():
     xlabel = attrs.get('xlabel', '')
     ax.set_ylabel(ylabel)
     ax.set_xlabel(xlabel)
-    p.remove_repeated_labels(fig_name)
+    if attrs.get('xticks'): ax.set_xticks(attrs['xticks'])
+    if attrs.get('yticks'): ax.set_yticks(attrs['yticks'])
+    p.remove_repeated_labels(fig_name, **attrs.get('legend_kwargs', {}))
+    # if legend: legend.e, attrs.get('legend_loc', 'best'))
     p.set_export_path(figs_attrs['global']['export_path'])
     p.export(fig, fig_name)
     # p.show()

@@ -1,3 +1,6 @@
+import subprocess
+import json
+from typing import NamedTuple
 import ffmpeg
 
 
@@ -34,14 +37,14 @@ def stack(streams_list, mode='h'):
     return stream
 
 
-def finish(stream, filename, output_path):
+def finish(stream, filename, output_path, **kwargs):
     """
     Run all operations on stream and save video
     :param stream: stream that will be saved
     :param filename: filename of the video
     :param output_path: path to folder that video will be exported to
     """
-    stream = stream.output(output_path + filename).run(overwrite_output=True)
+    stream = stream.output(output_path + filename, **kwargs).run(overwrite_output=True)
 
 
 def add_text(stream, text, x, y, font_size, anchor='lt', font_path=''):
@@ -131,3 +134,18 @@ def pad(stream, width, height, x, y, color="white"):
 
     """
     return ffmpeg.filter_(stream, 'pad', width=width, height=height, x=x, y=y, color=color)
+
+
+def ffprobe(file_path):
+    command_array = ["ffprobe",
+                     "-v", "quiet",
+                     "-print_format", "json",
+                     "-show_format",
+                     "-show_streams",
+                     file_path]
+    result = subprocess.run(command_array, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+    if result.returncode == 0:
+        json_result = json.loads(result.stdout)
+    else:
+        json_result = None
+    return json_result

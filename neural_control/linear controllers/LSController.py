@@ -2,9 +2,9 @@ import json
 import numpy as np
 
 
-class Controller():
+class LSController():
     """
-    Controller class that uses matlab generated coefficients
+    Loop Shaping controller class that uses matlab generated coefficients
 
     """
 

@@ -310,14 +310,9 @@ class TwoWayCouplingSimulation:
         diffusion_term = velocity_laplace * self.viscosity
         self.velocity = self.velocity.copied_with(values=convection_term.values + diffusion_term + buoyancy, extrapolation=self.velocity.extrapolation)
         # Apply sponge
-        # If the velocity is aligned with boundary outward normal, deaccelerate, otherwise set it to 0
         mask = (self.sponge_normal_mask * self.velocity) < 0  # Project velocity onto boundaries normal directions at sponge
         vel_boundaries = self.sponge_mask * self.velocity
         vel_boundaries = vel_boundaries - vel_boundaries * self.sponge * mask  # Deaccelerate flow coming from boundaries
-        # negative_values = vel_boundaries * (vel_boundaries < 0)  # Save negative values
-        # vel_boundaries = vel_boundaries - self.sponge  # Apply sponge deacceleration
-        # vel_boundaries = vel_boundaries * (vel_boundaries > 0) + negative_values   # Avoid creating negative values due to sponge
-        # vel_boundaries = vel_boundaries * self.sponge_normal_mask  # Project velocity back
         self.velocity = self.velocity * (1 - self.sponge_mask) + vel_boundaries
         # Tripping
         if tripping_on:

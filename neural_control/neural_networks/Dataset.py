@@ -298,7 +298,7 @@ class Dataset(torch.utils.data.Dataset):
 
 if __name__ == '__main__':
     from InputsManager import InputsManager
-    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", exclude=["online", "simulation"])
+    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", exclude=["unsupervised", "simulation"])
     label_vars = [var for var in inp.nn_vars if 'control' in var]
     dataset = Dataset('/home/ramos/phiflow/storage/dataset_box_local_bigger/', inp.supervised['tvt_ratio'], inp.nn_vars, label_vars, local=inp.supervised['local_coordinates'])
     dataset.set_mode('training')

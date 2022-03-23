@@ -21,16 +21,15 @@ from misc_funcs import get_weights_and_biases
 def calculate_loss(y, y_predict):
     # Return l2 loss
     return torch.sum((y - y_predict)**2) / y.shape[0]
-    # return torch.mean(torch.linalg.norm(y - y_predict, 2, -1))
 
 
 if __name__ == '__main__':
     seed = 10
-    parser = argparse.ArgumentParser(description='Train nn in an online setting')
+    parser = argparse.ArgumentParser(description='Train nn in an classic offline setting')
     parser.add_argument("export_path", help="data will be saved in this path")
     args = parser.parse_args()
     export_path = args.export_path + '/'
-    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", exclude=["online", "simulation"])
+    inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", exclude=["unsupervised", "simulation"])
     inp.add_values(inp.supervised['dataset_path'] + "/inputs.json", only=['simulation'])
     inp.calculate_properties()
     if inp.device == "GPU":
@@ -87,10 +86,7 @@ if __name__ == '__main__':
         for i_minibatch, (x_present, x_past, y_local) in enumerate(dataloader):
             y_local = y_local.to(device)
             x_present, x_past = x_present.to(device), x_past.to(device)
-            # x_past = x_past.view(x_present.shape[0], inp.past_window, inp.n_past_features)
-            # x_past = torch.swapaxes(x_past, 0, 1)
             y_predict = model(
-                # x_present.view(1, x_present.shape[0], inp.n_present_features),
                 x_present,
                 x_past,
                 inp.bypass_tanh)
@@ -105,7 +101,8 @@ if __name__ == '__main__':
             lr_scheduler.step()
             training_loss += local_loss.detach() * y_predict.shape[0]  # Eliminate mean computation for now
             n_batches += y_predict.shape[0]
-            # print(i_minibatch)
+            # if i == inp.supervised['n_iterations']: break  # TODO
+            # print(i)
         epoch += 1
         training_loss /= n_batches
         # Calculate time left
@@ -128,10 +125,7 @@ if __name__ == '__main__':
             for i_minibatch, (x_present, x_past, y_local) in enumerate(dataloader):
                 y_local = y_local.to(device)
                 x_present, x_past = x_present.to(device), x_past.to(device)
-                # x_past = x_past.view(x_present.shape[0], inp.past_window, inp.n_past_features)
-                # x_past = torch.swapaxes(x_past, 0, 1)
                 y_predict = model(
-                    # x_present.view(1, x_present.shape[0], inp.n_present_features),
                     x_present,
                     x_past,
                     inp.bypass_tanh)
@@ -150,6 +144,5 @@ if __name__ == '__main__':
                 for tag, value in var.items():
                     writer.add_histogram(f'{tag}', value, global_step=epoch)
             writer.flush()
-    # print(inp.past_window, epoch)
     writer.close()
     print('Done')

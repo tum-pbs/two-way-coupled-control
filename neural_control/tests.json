@@ -420,7 +420,7 @@
                 0
             ]
         },
-        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow2/",
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_disc/",
         "n_simulations": 20
     },
     "test2": {
@@ -444,7 +444,7 @@
                 ]
             ],
             "help_i": -1,
-            "export_stride": 50,
+            "export_stride": 20,
             "n_steps": 8001,
             "i": [
                 -1,
@@ -475,7 +475,7 @@
                 ]
             }
         },
-        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_simple_noinflow_smalldt/",
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_disc2/",
         "n_simulations": 1
     },
     "test3": {
@@ -932,7 +932,7 @@
                 "on": false
             },
             "n_steps": 8001,
-            "export_stride": 50,
+            "export_stride": 20,
             "angles": [
                 1.047197,
                 -1.047197,
@@ -986,7 +986,7 @@
                 ]
             },
             "n_steps": 8001,
-            "export_stride": 50,
+            "export_stride": 20,
             "angles": [
                 1.047197,
                 -1.047197,
@@ -1040,7 +1040,7 @@
                 ]
             },
             "n_steps": 8001,
-            "export_stride": 50,
+            "export_stride": 20,
             "angles": [
                 1.047197,
                 -1.047197,
@@ -1050,5 +1050,1026 @@
         },
         "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_box_two_obstacles/",
         "n_simulations": 1
+    },
+    "test7": {
+        "case0": {
+            "positions": [
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ],
+                [
+                    120,
+                    70
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": false,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                1.047197,
+                -1.047197,
+                2.09439,
+                -1.57079
+            ]
+        },
+        "case1": {
+            "positions": [
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": false,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                -1.047197,
+                1.047197,
+                2.09439,
+                -1.57079
+            ]
+        },
+        "case2": {
+            "positions": [
+                [
+                    120,
+                    40
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    70
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": false,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                2.09439,
+                -1.57079,
+                1.047197,
+                -1.047197
+            ]
+        },
+        "case3": {
+            "positions": [
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": false,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                -1.57079,
+                1.047197,
+                -1.047197,
+                2.09439
+            ]
+        },
+        "case4": {
+            "positions": [
+                [
+                    75,
+                    40
+                ],
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": false,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                1.047197,
+                2.09439,
+                -1.57079,
+                -1.047197
+            ]
+        },
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_box_inflow/",
+        "n_simulations": 5
+    },
+    "test8": {
+        "case0": {
+            "positions": [
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ],
+                [
+                    120,
+                    70
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                1.047197,
+                -1.047197,
+                2.09439,
+                -1.57079
+            ]
+        },
+        "case1": {
+            "positions": [
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                -1.047197,
+                1.047197,
+                2.09439,
+                -1.57079
+            ]
+        },
+        "case2": {
+            "positions": [
+                [
+                    120,
+                    40
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    70
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                2.09439,
+                -1.57079,
+                1.047197,
+                -1.047197
+            ]
+        },
+        "case3": {
+            "positions": [
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                -1.57079,
+                1.047197,
+                -1.047197,
+                2.09439
+            ]
+        },
+        "case4": {
+            "positions": [
+                [
+                    75,
+                    40
+                ],
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                1.047197,
+                2.09439,
+                -1.57079,
+                -1.047197
+            ]
+        },
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_box_inflow/",
+        "n_simulations": 5
+    },
+    "test9": {
+        "case0": {
+            "positions": [
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ],
+                [
+                    120,
+                    70
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                1.047197,
+                -1.047197,
+                2.09439,
+                -1.57079
+            ]
+        },
+        "case1": {
+            "positions": [
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                -1.047197,
+                1.047197,
+                2.09439,
+                -1.57079
+            ]
+        },
+        "case2": {
+            "positions": [
+                [
+                    120,
+                    40
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    70
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                2.09439,
+                1.047197,
+                -1.57079,
+                -1.047197
+            ]
+        },
+        "case3": {
+            "positions": [
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    40
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                -1.57079,
+                1.047197,
+                -1.047197,
+                2.09439
+            ]
+        },
+        "case4": {
+            "positions": [
+                [
+                    75,
+                    40
+                ],
+                [
+                    120,
+                    70
+                ],
+                [
+                    75,
+                    70
+                ],
+                [
+                    120,
+                    40
+                ]
+            ],
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.2
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 150,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.04
+                ]
+            },
+            "n_steps": 8001,
+            "export_stride": 20,
+            "angles": [
+                1.047197,
+                2.09439,
+                -1.57079,
+                -1.047197
+            ]
+        },
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_box_two_obstacles/",
+        "n_simulations": 5
+    },
+    "test10": {
+        "case0": {
+            "positions": [
+                [
+                    30,
+                    30
+                ],
+                [
+                    30,
+                    60
+                ],
+                [
+                    50,
+                    30
+                ],
+                [
+                    50,
+                    60
+                ]
+            ],
+            "help_i": -1,
+            "export_stride": 20,
+            "n_steps": 8001,
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "angles": [
+                0.7853981633974483,
+                -0.7853981633974483,
+                3.141592653589793,
+                0
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.1
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 60,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.02
+                ]
+            }
+        },
+        "case1": {
+            "positions": [
+                [
+                    30,
+                    60
+                ],
+                [
+                    50,
+                    30
+                ],
+                [
+                    30,
+                    30
+                ],
+                [
+                    50,
+                    60
+                ]
+            ],
+            "help_i": -1,
+            "export_stride": 20,
+            "n_steps": 8001,
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "angles": [
+                0.7853981633974483,
+                -0.7853981633974483,
+                3.141592653589793,
+                0
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.1
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 60,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.02
+                ]
+            }
+        },
+        "case2": {
+            "positions": [
+                [
+                    50,
+                    30
+                ],
+                [
+                    50,
+                    60
+                ],
+                [
+                    30,
+                    60
+                ],
+                [
+                    30,
+                    30
+                ]
+            ],
+            "help_i": -1,
+            "export_stride": 20,
+            "n_steps": 8001,
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "angles": [
+                0.7853981633974483,
+                -0.7853981633974483,
+                3.141592653589793,
+                0
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.1
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 60,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.02
+                ]
+            }
+        },
+        "case3": {
+            "positions": [
+                [
+                    50,
+                    60
+                ],
+                [
+                    30,
+                    30
+                ],
+                [
+                    50,
+                    30
+                ],
+                [
+                    30,
+                    60
+                ]
+            ],
+            "help_i": -1,
+            "export_stride": 20,
+            "n_steps": 8001,
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "angles": [
+                0.7853981633974483,
+                -0.7853981633974483,
+                3.141592653589793,
+                0
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.1
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 60,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.02
+                ]
+            }
+        },
+        "case4": {
+            "positions": [
+                [
+                    30,
+                    30
+                ],
+                [
+                    50,
+                    30
+                ],
+                [
+                    30,
+                    60
+                ],
+                [
+                    50,
+                    60
+                ]
+            ],
+            "help_i": -1,
+            "export_stride": 20,
+            "n_steps": 8001,
+            "i": [
+                -1,
+                2000,
+                4000,
+                6000
+            ],
+            "angles": [
+                0.7853981633974483,
+                -0.7853981633974483,
+                3.141592653589793,
+                0
+            ],
+            "smoke": {
+                "on": true,
+                "xy": [
+                    [
+                        0.5,
+                        0.1
+                    ]
+                ],
+                "inflow": 0.01,
+                "width": 60,
+                "height": 6,
+                "buoyancy": [
+                    0,
+                    0.02
+                ]
+            }
+        },
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_disc2/",
+        "n_simulations": 5
     }
 }

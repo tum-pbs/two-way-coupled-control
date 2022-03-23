@@ -52,42 +52,14 @@ class InputsManager():
             print('Simulation properties were not calculated')
             pass
         try:
-            self.online['destinations_margins'] = np.array(self.online['destinations_margins'])
+            self.unsupervised['destinations_margins'] = np.array(self.unsupervised['destinations_margins'])
         except:
-            print('Online training properties were not calculated')
+            print('Unsupervised training properties were not calculated')
             pass
 
         n_features = defaultdict(lambda: 1)
-        n_features["probes_vx"] = (self.probes_n_rows * (self.probes_n_columns - 1)) * 4,
-        n_features["probes_vy"] = (self.probes_n_rows * (self.probes_n_columns - 1)) * 4,
         self.n_past_features = np.sum([n_features[var] for var in self.nn_vars])
         self.n_present_features = np.sum([n_features[var] for var in self.nn_vars if "control" not in var])
-        # self.n_past_features = np.sum((
-        #     # (self.probes_n_rows * (self.probes_n_columns - 1)) * 2 * 4,  # Probes
-        #     2,  # Obs velocity
-        #     2,  # Reference xy
-        #     # 2,  # Fluid forces
-        #     2,  # Control forces
-        # ))
-        # self.n_present_features = np.sum((
-        #     # (self.probes_n_rows * (self.probes_n_columns - 1)) * 2 * 4,  # Probes
-        #     2,  # Obs velocity
-        #     2,  # Reference xy
-        #     # 2,  # Fluid forces
-        # ))
-        # if not self.translation_only:
-        #     self.n_past_features += np.sum((
-        #         1,  # Reference angle
-        #         # 1,  # Fluid torque
-        #         1,  # Control torque
-        #         # 2,  # Second control force # TODO
-        #         1,  # Angular velocity
-        #     ))
-        #     self.n_present_features += np.sum((
-        #         1,  # Reference angle
-        #         # 1,  # Fluid torque
-        #         1,  # Angular velocity
-        #     ))
 
     def delete_attributes(self, keys_to_remove: list):
         """
