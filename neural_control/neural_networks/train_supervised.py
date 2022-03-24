@@ -95,7 +95,7 @@ if __name__ == '__main__':
             optimizer.step()
             i += 1
             if i % inp.supervised['model_export_stride'] == 0:
-                torch.save(model, f"{export_path}/trained_model_{export_counter:04d}.pth")
+                torch.save(model.state_dict(), f"{export_path}/trained_model_{export_counter:04d}.pt")
                 export_counter += 1
             optimizer.zero_grad()
             lr_scheduler.step()

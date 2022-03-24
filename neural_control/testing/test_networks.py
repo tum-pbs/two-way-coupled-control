@@ -4,6 +4,7 @@ from Dataset import Dataset
 from InputsManager import InputsManager
 from misc_funcs import *
 from InputsManager import RLInputsManager
+from NeuralController import NeuralController
 # from sac_actor import load_sac_torch_module
 # from sac_actor import SACActorModule
 CUDA_LAUNCH_BLOCKING = 1
@@ -36,7 +37,7 @@ if __name__ == "__main__":
         TORCH_BACKEND.set_default_device("CPU")
         device = torch.device("cpu")
     # Load tests json
-    model_path = f"{run_path}/trained_model_{model_id:04d}.pth"
+    model_path = f"{run_path}/trained_model_{model_id:04d}.pt"
     tests = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../tests.json"), tests_id)
     print(f"\n\n Running tests on model {model_path}")
     for test_label, test in tests.__dict__.items():  # Loop through tests
@@ -74,7 +75,13 @@ if __name__ == "__main__":
         if model_type == "rl":
             model = load_sac_torch_module(model_path).to(device)
         else:
-            model = torch.load(os.path.abspath(model_path)).to(device)
+            model = NeuralController(
+                f"{inp.architecture}{inp.past_window}",
+                2 if inp.translation_only else 3,
+                inp.n_present_features,
+                inp.n_past_features,
+                inp.past_window).to(device)
+            model.load_state_dict(torch.load(os.path.abspath(model_path)))
         print("Model's state_dict:")  # Print model's attributes
         for param_tensor in model.state_dict():
             print(param_tensor, "\t", model.state_dict()[param_tensor].size())
@@ -86,7 +93,7 @@ if __name__ == "__main__":
         if model_type == "rl":
             rl_inp = RLInputsManager(inp.past_window, inp.n_past_features, inp.rl['n_snapshots_per_window'], device)
         # Save a copy of the model that will be used for tests
-        torch.save(model, os.path.abspath(f"{export_path}{model_path.split('/')[-1]}"))
+        torch.save(model.state_dict(), os.path.abspath(f"{export_path}{model_path.split('/')[-1]}"))
         # ----------------------------------------------
         # ------------------ Simulate ------------------
         # ----------------------------------------------

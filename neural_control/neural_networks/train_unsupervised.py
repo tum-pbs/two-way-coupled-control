@@ -79,7 +79,7 @@ if __name__ == "__main__":
     # Prepare folder for saving data
     shutil.rmtree(inp.export_path + 'tensorboard', ignore_errors=True)
     writer = tb.SummaryWriter(inp.export_path + '/tensorboard/')
-    torch.save(model, os.path.abspath(f"{inp.export_path}/initial_model_{first_case}.pth"))
+    torch.save(model.state_dict(), os.path.abspath(f"{inp.export_path}/initial_model_{first_case}.pt"))
     # Number of simulations necessary to achieve desired number of iterations
     n_simulations = inp.unsupervised["n_iterations"] / (inp.unsupervised["n_timesteps"] / inp.unsupervised["n_before_backprop"])
     n_simulations = ceil(n_simulations / inp.unsupervised["simulation_dropout"]) * 2  # Add double the amount necessary just in case some dont converge
@@ -177,7 +177,7 @@ if __name__ == "__main__":
                     if i_bp % inp.unsupervised["model_export_stride"] == 0:
                         model_id = int(i_bp / inp.unsupervised["model_export_stride"])
                         print(f"Saving model {model_id}")
-                        torch.save(model, os.path.abspath(f"{inp.export_path}/trained_model_{model_id:04d}.pth"))
+                        torch.save(model.state_dict(), os.path.abspath(f"{inp.export_path}/trained_model_{model_id:04d}.pt"))
                         weigths, biases = get_weights_and_biases(model)
                         for var in (weigths, biases):
                             for tag, value in var.items():
