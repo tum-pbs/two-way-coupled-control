@@ -1,17 +1,12 @@
-# import plotter; import importlib; importlib.reload(plotter); from plotter import Plotter
 
-# from demos.myscripts.dbghelpers import plot
-import dbghelpers as dbg
 from Plotter import Plotter
 import shutil
 from shutil import copyfile
 
-# from bspline3_interpolate import bspline3_interpolate
 from natsort import natsorted
 from numpy import pi
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
-# from weak_coupling import *
 from TwoWayCouplingSimulation import *
 from InputsManager import InputsManager
 import time
@@ -58,16 +53,9 @@ class Generator(TwoWayCouplingSimulation):
         i = 0
         seed = 0
         while True:
-            # for i in range(len(destinations)):
-            # knots_y_vy = [1] * 4
             knots_y_vy = [0, 6, 4, 1, 0]
-
             knots_y_vx = knots_y_vy
-            # knots_y_vx = self.sample_random_curve(self.n_vel_spline_knots, 5.0, int(2 * seed) + 1)
             seed += 1
-            # knots_y = [[knot_y_vy, knot_y_vx] for knot_y_vy, knot_y_vx in zip(knots_y_vy, knots_y_vx)]
-            # knots_vx = [knot[0] for knot in knots]
-            # knots_vy = [knot[1] for knot in knots]
             x = np.arange(len(knots_y_vy))
             cs_x = CubicSpline(x, knots_y_vy, bc_type="clamped")
             cs_y = CubicSpline(x, knots_y_vx, bc_type="clamped")
@@ -271,14 +259,6 @@ if __name__ == "__main__":
         ang_velocities = np.concatenate((ang_velocities, np.zeros(shape_concat)), axis=1)
         ang_velocities = ang_velocities[:, :, 0]
         inp.supervised['objective_angles'] = objective_angles
-    # # Probes
-    # probes = Probes(
-    #     inp.simulation['obs_width'] / 2 + inp.probes_offset,
-    #     inp.simulation['obs_height'] / 2 + inp.probes_offset,
-    #     inp.probes_size,
-    #     inp.probes_n_rows,
-    #     inp.probes_n_columns,
-    #     inp.simulation['obs_xy'])
     inp.export(inp.supervised["dataset_path"] + "inputs.json")
     current = time.time()
     for i, (velocity, ang_velocity) in enumerate(zip(velocities, ang_velocities)):

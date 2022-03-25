@@ -22,7 +22,6 @@ build/
 felix/
 *.log
 controller_coef*
-gains_*
 neural_control/temp/*
 phiflow.egg-info/*
 neural_control/visualization/log.json

@@ -1,17 +1,17 @@
 {
     "global": {
-        "width": 5,
-        "height": 5,
-        "font_size": 20,
+        "height": 1.8,
+        "width": 4,
+        "font_size": 12,
         "font_size_legend": 10,
         "export_path": "/home/ramos/phiflow/figs/",
         "dpi": 400
     },
     "error_xy_test1": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/translation/online_11/",
+            "Diff": "/home/ramos/phiflow/storage/translation/online_11/",
             "PID": "/home/ramos/phiflow/storage/translation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/translation/supervised/",
+            "Sup": "/home/ramos/phiflow/storage/translation/supervised/",
             "LS": "/home/ramos/phiflow/storage/translation/loop_shaped/",
             "RL": "/home/ramos/phiflow/storage/translation/rl/"
         },
@@ -19,10 +19,21 @@
         "all_models": false,
         "ylabel": "$\\overline{\\|e_{xy}\\|}$",
         "xlabel": "$t$",
-        "stdd": {
-            "alpha": 0.3,
-            "facecolor": "none"
-        },
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            5,
+            10,
+            15
+        ],
+        "xticks": [
+            0,
+            25,
+            50,
+            75,
+            100
+        ],
         "metrics": [
             {
                 "name": "general_error_xy",
@@ -32,7 +43,7 @@
                     "ylog": false,
                     "create_grid": true,
                     "kwargs": {
-                        "alpha": 0.8
+                        "alpha": 0.5
                     }
                 }
             }
@@ -40,9 +51,9 @@
     },
     "error_xy_test2": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/translation/online_11/",
+            "Diff": "/home/ramos/phiflow/storage/translation/online_11/",
             "PID": "/home/ramos/phiflow/storage/translation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/translation/supervised/",
+            "Sup": "/home/ramos/phiflow/storage/translation/supervised/",
             "LS": "/home/ramos/phiflow/storage/translation/loop_shaped/",
             "RL": "/home/ramos/phiflow/storage/translation/rl/"
         },
@@ -50,6 +61,24 @@
         "all_models": false,
         "ylabel": "$\\|e_{xy}\\|$",
         "xlabel": "$t$",
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40
+        ],
+        "legend_kwargs": {
+            "loc": [
+                0.005,
+                0.41
+            ],
+            "prop": {
+                "size": 7
+            }
+        },
         "metrics": [
             {
                 "name": "general_error_xy",
@@ -57,6 +86,10 @@
                 "args": {
                     "create_legend": true,
                     "create_grid": true,
+                    "y_limits": [
+                        -2,
+                        40
+                    ],
                     "kwargs": {
                         "alpha": 0.5
                     }
@@ -67,8 +100,8 @@
     "x_tracking_test2": {
         "runs": {
             "PID": "/home/ramos/phiflow/storage/translation/pid/",
-            "Online 11": "/home/ramos/phiflow/storage/translation/online_11/",
-            "Supervised": "/home/ramos/phiflow/storage/translation/supervised/",
+            "Diff 11": "/home/ramos/phiflow/storage/translation/online_11/",
+            "Sup": "/home/ramos/phiflow/storage/translation/supervised/",
             "LS": "/home/ramos/phiflow/storage/translation/loop_shaped/",
             "RL": "/home/ramos/phiflow/storage/translation/rl/"
         },
@@ -109,8 +142,8 @@
     "y_tracking_test2": {
         "runs": {
             "PID": "/home/ramos/phiflow/storage/translation/pid/",
-            "Online 11": "/home/ramos/phiflow/storage/translation/online_11/",
-            "Supervised": "/home/ramos/phiflow/storage/translation/supervised/",
+            "Diff 11": "/home/ramos/phiflow/storage/translation/online_11/",
+            "Sup": "/home/ramos/phiflow/storage/translation/supervised/",
             "LS": "/home/ramos/phiflow/storage/translation/loop_shaped/",
             "RL": "/home/ramos/phiflow/storage/translation/rl/"
         },
@@ -151,8 +184,8 @@
     "forces_test1": {
         "runs": {
             "PID": "/home/ramos/phiflow/storage/translation/pid/",
-            "Online": "/home/ramos/phiflow/storage/translation/online_11/",
-            "Supervised": "/home/ramos/phiflow/storage/translation/supervised/",
+            "Diff": "/home/ramos/phiflow/storage/translation/online_11/",
+            "Sup": "/home/ramos/phiflow/storage/translation/supervised/",
             "LS": "/home/ramos/phiflow/storage/translation/loop_shaped/",
             "RL": "/home/ramos/phiflow/storage/translation/rl/"
         },
@@ -185,8 +218,8 @@
     "forces_test2": {
         "runs": {
             "PID": "/home/ramos/phiflow/storage/translation/pid/",
-            "Online 11": "/home/ramos/phiflow/storage/translation/online_11/",
-            "Supervised": "/home/ramos/phiflow/storage/translation/supervised/",
+            "Diff 11": "/home/ramos/phiflow/storage/translation/online_11/",
+            "Sup": "/home/ramos/phiflow/storage/translation/supervised/",
             "LS": "/home/ramos/phiflow/storage/translation/loop_shaped/",
             "RL": "/home/ramos/phiflow/storage/translation/rl/"
         },
@@ -212,11 +245,112 @@
             }
         ]
     },
+    "targets_test1": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/translation/online_11/"
+        },
+        "test": "test1",
+        "ylabel": "$y$",
+        "xlabel": "$x$",
+        "all_models": false,
+        "width": 1.8,
+        "height": 1.8,
+        "xticks": [
+            20,
+            40,
+            60
+        ],
+        "yticks": [
+            20,
+            40,
+            60
+        ],
+        "metrics": [
+            {
+                "name": "objective_xy_points",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.8,
+                        "color": "k",
+                        "linestyle": "None",
+                        "marker": "+"
+                    }
+                }
+            }
+        ]
+    },
+    "targets_xy_test3": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/pid/"
+        },
+        "test": "test3",
+        "ylabel": "$y$",
+        "xlabel": "$x$",
+        "all_models": false,
+        "width": 1.8,
+        "height": 1.8,
+        "xticks": [
+            20,
+            40,
+            60
+        ],
+        "yticks": [
+            20,
+            40,
+            60
+        ],
+        "metrics": [
+            {
+                "name": "objective_xy_points",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.8,
+                        "color": "k",
+                        "linestyle": "None",
+                        "marker": "+"
+                    }
+                }
+            }
+        ]
+    },
+    "targets_ang_test3": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/pid/"
+        },
+        "test": "test3",
+        "ylabel": "$y$",
+        "xlabel": "$x$",
+        "all_models": false,
+        "width": 1.8,
+        "height": 1.8,
+        "metrics": [
+            {
+                "name": "objective_ang_points",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.8,
+                        "color": "k",
+                        "linestyle": "None",
+                        "marker": "+"
+                    }
+                }
+            }
+        ]
+    },
     "trajectories_test2": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/translation/online_11/",
+            "Diff": "/home/ramos/phiflow/storage/translation/online_11/",
             "PID": "/home/ramos/phiflow/storage/translation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/translation/supervised/",
+            "Sup": "/home/ramos/phiflow/storage/translation/supervised/",
             "LS": "/home/ramos/phiflow/storage/translation/loop_shaped/",
             "RL": "/home/ramos/phiflow/storage/translation/rl/"
         },
@@ -254,18 +388,22 @@
     },
     "error_xy_test3": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test3",
         "ylabel": "$\\overline{\\|e_{xy}\\|}$",
         "xlabel": "$t$",
         "all_models": false,
-        "stdd": {
-            "alpha": 0.2,
-            "facecolor": "none"
-        },
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            5,
+            10,
+            15
+        ],
         "metrics": [
             {
                 "name": "general_error_xy",
@@ -283,14 +421,24 @@
     },
     "error_xy_test4": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test4",
         "ylabel": "$\\|e_{xy}\\|$",
         "xlabel": "$t$",
         "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50
+        ],
         "metrics": [
             {
                 "name": "general_error_xy",
@@ -308,14 +456,24 @@
     },
     "error_xy_test5": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test5",
         "ylabel": "$\\|e_{xy}\\|$",
         "xlabel": "$t$",
         "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50
+        ],
         "metrics": [
             {
                 "name": "general_error_xy",
@@ -333,14 +491,24 @@
     },
     "error_xy_test6": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test6",
         "ylabel": "$\\|e_{xy}\\|$",
         "xlabel": "$t$",
         "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50
+        ],
         "metrics": [
             {
                 "name": "general_error_xy",
@@ -356,22 +524,184 @@
             }
         ]
     },
+    "error_xy_test7": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "PID": "/home/ramos/phiflow/storage/rotation/pid/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
+        },
+        "test": "test7",
+        "ylabel": "$\\|e_{xy}\\|$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50
+        ],
+        "metrics": [
+            {
+                "name": "general_error_xy_1",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_xy_test8": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "PID": "/home/ramos/phiflow/storage/rotation/pid/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
+        },
+        "test": "test8",
+        "ylabel": "$\\|e_{xy}\\|$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50
+        ],
+        "metrics": [
+            {
+                "name": "general_error_xy_2",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_xy_test9": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "PID": "/home/ramos/phiflow/storage/rotation/pid/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
+        },
+        "test": "test9",
+        "ylabel": "$\\|e_{xy}\\|$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50
+        ],
+        "metrics": [
+            {
+                "name": "general_error_xy_3",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_xy_test10": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/translation/online_11/",
+            "PID": "/home/ramos/phiflow/storage/translation/pid/",
+            "Sup": "/home/ramos/phiflow/storage/translation/supervised/",
+            "LS": "/home/ramos/phiflow/storage/translation/loop_shaped/",
+            "RL": "/home/ramos/phiflow/storage/translation/rl/"
+        },
+        "test": "test10",
+        "ylabel": "$\\|e_{xy}\\|$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40
+        ],
+        "legend_kwargs": {
+            "loc": [
+                0.005,
+                0.41
+            ],
+            "prop": {
+                "size": 7
+            }
+        },
+        "metrics": [
+            {
+                "name": "general_error_xy_0",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "ylog": false,
+                    "create_grid": true,
+                    "y_limits": [
+                        -2,
+                        40
+                    ],
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
     "error_ang_test4": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test4",
         "ylabel": "${\\|e_{\\alpha}\\|}$",
         "xlabel": "$t$",
         "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
         "metrics": [
             {
                 "name": "general_error_ang",
                 "plot_type": "plot",
                 "args": {
-                    "create_legend": true,
+                    "create_legend": false,
                     "ylog": false,
                     "create_grid": true,
                     "kwargs": {
@@ -383,20 +713,28 @@
     },
     "error_ang_test5": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test5",
         "ylabel": "${\\|e_{\\alpha}\\|}$",
         "xlabel": "$t$",
         "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
         "metrics": [
             {
                 "name": "general_error_ang",
                 "plot_type": "plot",
                 "args": {
-                    "create_legend": true,
+                    "create_legend": false,
                     "ylog": false,
                     "create_grid": true,
                     "kwargs": {
@@ -408,20 +746,362 @@
     },
     "error_ang_test6": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test6",
         "ylabel": "${\\|e_{\\alpha}\\|}$",
         "xlabel": "$t$",
         "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
         "metrics": [
             {
                 "name": "general_error_ang",
                 "plot_type": "plot",
                 "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_ang_test7": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "PID": "/home/ramos/phiflow/storage/rotation/pid/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
+        },
+        "test": "test7",
+        "ylabel": "${\\|e_{\\alpha}\\|}$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "metrics": [
+            {
+                "name": "general_error_ang_1",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_ang_test8": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "PID": "/home/ramos/phiflow/storage/rotation/pid/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
+        },
+        "test": "test8",
+        "ylabel": "${\\|e_{\\alpha}\\|}$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "metrics": [
+            {
+                "name": "general_error_ang_2",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_ang_test9": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "PID": "/home/ramos/phiflow/storage/rotation/pid/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
+        },
+        "test": "test9",
+        "ylabel": "${\\|e_{\\alpha}\\|}$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "metrics": [
+            {
+                "name": "general_error_ang_3",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_ang_seeds": {
+        "runs": {
+            "Seed1": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Seed2": "/home/ramos/phiflow/storage/rotation/online_20_seed1000/",
+            "Seed3": "/home/ramos/phiflow/storage/rotation/online_20_seed10000/",
+            "PID": "/home/ramos/phiflow/storage/rotation/pid/"
+        },
+        "test": "test6",
+        "ylabel": "${\\|e_{\\alpha}\\|}$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "metrics": [
+            {
+                "name": "general_error_ang",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_xy_seeds": {
+        "runs": {
+            "Seed1": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Seed2": "/home/ramos/phiflow/storage/rotation/online_20_seed1000/",
+            "Seed3": "/home/ramos/phiflow/storage/rotation/online_20_seed10000/",
+            "PID": "/home/ramos/phiflow/storage/rotation/pid/"
+        },
+        "test": "test6",
+        "all_models": false,
+        "ylabel": "$\\|e_{xy}\\|$",
+        "xlabel": "$t$",
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50,
+            60
+        ],
+        "legend_kwargs": {
+            "prop": {
+                "size": 7
+            }
+        },
+        "metrics": [
+            {
+                "name": "general_error_xy",
+                "plot_type": "plot",
+                "args": {
                     "create_legend": true,
+                    "create_grid": true,
+                    "y_limits": [
+                        -2,
+                        40
+                    ],
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_xy_supervised": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/",
+            "SupDoubleData": "/home/ramos/phiflow/storage/rotation/supervised_biggerdataset/"
+        },
+        "test": "test6",
+        "all_models": false,
+        "ylabel": "$\\|e_{xy}\\|$",
+        "xlabel": "$t$",
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50,
+            60
+        ],
+        "legend_kwargs": {
+            "prop": {
+                "size": 7
+            }
+        },
+        "metrics": [
+            {
+                "name": "general_error_xy",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "create_grid": true,
+                    "y_limits": [
+                        -2,
+                        40
+                    ],
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_xy_unrolling": {
+        "runs": {
+            "$l=4$": "/home/ramos/phiflow/storage/rotation/online_l4/",
+            "$l=8$": "/home/ramos/phiflow/storage/rotation/online_l8/",
+            "$l=16$": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "$l=32$": "/home/ramos/phiflow/storage/rotation/online_l32/"
+        },
+        "test": "test6",
+        "all_models": false,
+        "ylabel": "$\\|e_{xy}\\|$",
+        "xlabel": "$t$",
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50,
+            60
+        ],
+        "legend_kwargs": {
+            "prop": {
+                "size": 7
+            }
+        },
+        "metrics": [
+            {
+                "name": "general_error_xy",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "create_grid": true,
+                    "y_limits": [
+                        -2,
+                        40
+                    ],
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_ang_unrolling": {
+        "runs": {
+            "$l=4$": "/home/ramos/phiflow/storage/rotation/online_l4/",
+            "$l=8$": "/home/ramos/phiflow/storage/rotation/online_l8/",
+            "$l=16$": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "$l=32$": "/home/ramos/phiflow/storage/rotation/online_l32/"
+        },
+        "test": "test6",
+        "ylabel": "${\\|e_{\\alpha}\\|}$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "metrics": [
+            {
+                "name": "general_error_ang",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_ang_supervised": {
+        "runs": {
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/",
+            "SupDoubleData": "/home/ramos/phiflow/storage/rotation/supervised_biggerdataset/"
+        },
+        "test": "test6",
+        "ylabel": "${\\|e_{\\alpha}\\|}$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "metrics": [
+            {
+                "name": "general_error_ang",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
                     "ylog": false,
                     "create_grid": true,
                     "kwargs": {
@@ -434,8 +1114,8 @@
     "forces_test3": {
         "runs": {
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/",
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/"
         },
         "test": "test3",
         "ylabel": "$F$",
@@ -459,8 +1139,8 @@
     "torque_test3": {
         "runs": {
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/",
-            "Online 18": "/home/ramos/phiflow/storage/rotation/online_20_seed100/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/",
+            "Diff 18": "/home/ramos/phiflow/storage/rotation/online_20_seed100/"
         },
         "test": "test3",
         "ylabel": "$T$",
@@ -484,8 +1164,8 @@
     "forces_test4": {
         "runs": {
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/",
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/"
         },
         "test": "test4",
         "all_models": true,
@@ -507,9 +1187,9 @@
     },
     "angle_tracking_test6": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test6",
         "ylabel": "$\\alpha$",
@@ -553,9 +1233,9 @@
     },
     "angle_tracking_test4": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test4",
         "ylabel": "$\\alpha$",
@@ -599,9 +1279,9 @@
     },
     "angle_tracking_test5": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test5",
         "ylabel": "$\\alpha$",
@@ -645,9 +1325,9 @@
     },
     "xy_tracking_test4": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test4",
         "ylabel": "$xy$",
@@ -721,9 +1401,9 @@
     },
     "xy_tracking_test5": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test5",
         "all_models": false,
@@ -797,9 +1477,9 @@
     },
     "xy_tracking_test6": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test6",
         "ylabel": "$xy$",
@@ -873,8 +1553,8 @@
     },
     "trajectories_test4": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/"
         },
         "ylabel": "$y$",
@@ -911,9 +1591,9 @@
     },
     "trajectories_test5": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "ylabel": "$y$",
         "xlabel": "$x$",
@@ -949,9 +1629,9 @@
     },
     "trajectories_test6": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "ylabel": "$y$",
         "xlabel": "$x$",
@@ -987,27 +1667,31 @@
     },
     "error_ang_test3": {
         "runs": {
-            "Online": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
+            "Diff": "/home/ramos/phiflow/storage/rotation/online_20_seed100/",
             "PID": "/home/ramos/phiflow/storage/rotation/pid/",
-            "Supervised": "/home/ramos/phiflow/storage/rotation/supervised/"
+            "Sup": "/home/ramos/phiflow/storage/rotation/supervised/"
         },
         "test": "test3",
         "all_models": false,
         "ylabel": "$\\overline{\\|e_{\\alpha}\\|}$",
         "xlabel": "$t$",
-        "stdd": {
-            "alpha": 0.2,
-            "facecolor": "none"
-        },
+        "height": 1.8,
+        "width": 4,
+        "yticks": [
+            0,
+            0.5,
+            1,
+            1.5
+        ],
         "metrics": [
             {
                 "name": "general_error_ang",
                 "plot_type": "plot",
                 "args": {
-                    "create_legend": true,
+                    "create_legend": false,
                     "create_grid": true,
                     "kwargs": {
-                        "alpha": 0.8
+                        "alpha": 0.5
                     }
                 }
             }
@@ -1160,6 +1844,147 @@
                             10,
                             20
                         ]
+                    }
+                }
+            }
+        ]
+    },
+    "error_xy_test5_ablation": {
+        "runs": {
+            "OVE": "/home/ramos/phiflow/storage/rotation/online_20_seed1000/",
+            "OE": "/home/ramos/phiflow/storage/rotation/online_20_onlySE_seed1000/",
+            "OV": "/home/ramos/phiflow/storage/rotation/online_20_onlySV_seed1000/"
+        },
+        "test": "test5",
+        "ylabel": "$\\|e_{xy}\\|$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.5,
+        "yticks": [
+            0,
+            10,
+            20,
+            30,
+            40,
+            50
+        ],
+        "metrics": [
+            {
+                "name": "general_error_xy",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": true,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "error_ang_test5_ablation": {
+        "runs": {
+            "OVE": "/home/ramos/phiflow/storage/rotation/online_20_seed1000/",
+            "OE": "/home/ramos/phiflow/storage/rotation/online_20_onlySE_seed1000/",
+            "OV": "/home/ramos/phiflow/storage/rotation/online_20_onlySV_seed1000/"
+        },
+        "test": "test5",
+        "ylabel": "$\\|e_{\\alpha}\\|$",
+        "xlabel": "$t$",
+        "all_models": false,
+        "height": 1.5,
+        "xticks": [
+            0,
+            100,
+            200,
+            300,
+            400
+        ],
+        "yticks": [
+            0,
+            1,
+            2,
+            3
+        ],
+        "metrics": [
+            {
+                "name": "general_error_ang",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "forces_test5_ablation": {
+        "runs": {
+            "OVE": "/home/ramos/phiflow/storage/rotation/online_20_seed1000/",
+            "OE": "/home/ramos/phiflow/storage/rotation/online_20_onlySE_seed1000/",
+            "OV": "/home/ramos/phiflow/storage/rotation/online_20_onlySV_seed1000/"
+        },
+        "test": "test5",
+        "ylabel": "$\\|F\\|$",
+        "xlabel": "$t$",
+        "height": 2.5,
+        "stdd": {
+            "alpha": 0.2,
+            "facecolor": "none"
+        },
+        "xticks": [
+            0,
+            100,
+            200,
+            300,
+            400
+        ],
+        "metrics": [
+            {
+                "name": "force",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
+                    }
+                }
+            }
+        ]
+    },
+    "torque_test5_ablation": {
+        "runs": {
+            "OVE": "/home/ramos/phiflow/storage/rotation/online_20_seed1000/",
+            "OE": "/home/ramos/phiflow/storage/rotation/online_20_onlySE_seed1000/",
+            "OV": "/home/ramos/phiflow/storage/rotation/online_20_onlySV_seed1000/"
+        },
+        "test": "test5",
+        "ylabel": "$\\|T\\|$",
+        "xlabel": "$t$",
+        "stdd": {
+            "alpha": 0.2,
+            "facecolor": "none"
+        },
+        "metrics": [
+            {
+                "name": "torque",
+                "plot_type": "plot",
+                "args": {
+                    "create_legend": false,
+                    "ylog": false,
+                    "x_limits": [
+                        0,
+                        400
+                    ],
+                    "create_grid": true,
+                    "kwargs": {
+                        "alpha": 0.5
                     }
                 }
             }
