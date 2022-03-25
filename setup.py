@@ -141,7 +141,9 @@ setup(
               'phi.struct',
               'phi.tf',
               'phi.torch',
-              'webglviewer'],
+              'webglviewer',
+              'neural_control',
+              'neural_control.neural_networks.rl'],
     cmdclass={
         'tf_cuda': CudaCommand,
     },

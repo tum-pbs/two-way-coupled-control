@@ -1,6 +1,6 @@
 from typing import Iterable, Tuple
 import torch
-from TwoWayCouplingSimulation import *
+from neural_control.misc.TwoWayCouplingSimulation import *
 from collections import OrderedDict, defaultdict
 from phi.torch.flow import *
 import os

@@ -1,12 +1,9 @@
 import time
 import argparse
-from Dataset import Dataset
-from InputsManager import InputsManager
-from misc_funcs import *
-from InputsManager import RLInputsManager
-from NeuralController import NeuralController
-# from sac_actor import load_sac_torch_module
-# from sac_actor import SACActorModule
+from neural_control.InputsManager import InputsManager, RLInputsManager
+from neural_control.misc.misc_funcs import *
+from neural_control.neural_networks.NeuralController import NeuralController
+from neural_control.neural_networks.rl.extract_model import load_sac_torch_module, SACActorModule
 CUDA_LAUNCH_BLOCKING = 1
 torch.set_printoptions(sci_mode=True)
 
@@ -73,7 +70,13 @@ if __name__ == "__main__":
         assert sampling_stride.is_integer()
         # Load model
         if model_type == "rl":
-            model = load_sac_torch_module(model_path).to(device)
+            latent_pi = torch.nn.Sequential(
+                torch.nn.Linear(16, 38),
+                torch.nn.ReLU(),
+                torch.nn.Linear(38, 38),
+                torch.nn.ReLU())
+            mu = torch.nn.Linear(38, 2)
+            model = SACActorModule(latent_pi, mu, 0, 0, (16,)).to(device)
         else:
             model = NeuralController(
                 f"{inp.architecture}{inp.past_window}",
@@ -81,7 +84,7 @@ if __name__ == "__main__":
                 inp.n_present_features,
                 inp.n_past_features,
                 inp.past_window).to(device)
-            model.load_state_dict(torch.load(os.path.abspath(model_path)))
+        model.load_state_dict(torch.load(os.path.abspath(model_path)))
         print("Model's state_dict:")  # Print model's attributes
         for param_tensor in model.state_dict():
             print(param_tensor, "\t", model.state_dict()[param_tensor].size())

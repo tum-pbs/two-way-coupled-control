@@ -1,21 +1,18 @@
-from phi.math import PI
-from natsort import natsorted
 import numpy as np
 import os
-import logging
 from time import time
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # FATAL
 # logging.getLogger('tensorflow').setLevel(logging.FATAL)
 # import nn
 # import tensorflow.python.keras as keras
 import shutil
-from NeuralController import NeuralController
+from neural_control.neural_networks.NeuralController import NeuralController
 import argparse
-from InputsManager import InputsManager
-from Dataset import Dataset
+from neural_control.InputsManager import InputsManager
+from neural_control.neural_networks.Dataset import Dataset
 import torch
 import torch.utils.tensorboard as tb
-from misc_funcs import get_weights_and_biases
+from neural_control.misc.misc_funcs import get_weights_and_biases
 
 
 def calculate_loss(y, y_predict):

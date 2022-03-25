@@ -1,7 +1,7 @@
 from math import ceil
-from InputsManager import InputsManager
-from NeuralController import NeuralController
-from misc_funcs import *
+from neural_control.InputsManager import InputsManager
+from neural_control.neural_networks.NeuralController import NeuralController
+from neural_control.misc.misc_funcs import *
 import argparse
 import torch.utils.tensorboard as tb
 from time import time
