@@ -1,11 +1,8 @@
 import time
-from itertools import chain
 import argparse
-from Dataset import Dataset
-
 from InputsManager import InputsManager
-from LSController import LSController
-from PIDController import PIDController
+from neural_control.linear_controllers.LSController import LSController
+from neural_control.linear_controllers.PIDController import PIDController
 from misc_funcs import *
 CUDA_LAUNCH_BLOCKING = 1
 torch.set_printoptions(sci_mode=True)

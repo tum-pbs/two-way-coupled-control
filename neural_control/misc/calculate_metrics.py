@@ -25,15 +25,15 @@ def calculate_variability(y: np.array, y_additional: np.array = 0, normalizing_f
 
 def calculate_norm(x: np.array, y: np.array = 0, normalizing_factor: float = 1):
     """
-    Calculate mean spatial error from x and y components and its standard deviation
+    Calculate mean norm from x and y components and its standard deviation
 
     Params:
-        x: x component of error
-        y: y component of error
+        x: x component
+        y: y component
         normalizing_factor: normalizing factor
 
     Returns:
-        (error,sigma): mean spatial error xy and standard deviation
+        (z,sigma): mean of x y and standard deviation
         labels: labels of outputs
 
     """
@@ -41,6 +41,24 @@ def calculate_norm(x: np.array, y: np.array = 0, normalizing_factor: float = 1):
     sigma = np.std(z, axis=0)
     z = np.mean(z, axis=0)
     return (z, sigma), ('', '_stdd')
+
+
+def calculate_norm_individual(x: np.array, y: np.array = 0, normalizing_factor: float = 1):
+    """
+    Calculate norm from x and y components
+
+    Params:
+        x: x component
+        y: y component
+        normalizing_factor: normalizing factor
+
+    Returns:
+        z: norm and standard deviation of all simulations
+        labels: labels of outputs
+
+    """
+    z = np.sqrt(x**2 + y**2) / normalizing_factor
+    return (z,), ('',)
 
 
 def calculate_ss(x: np.array, reference_x: np.array, y: np.array = 0, reference_y: np.array = None, normalizing_factor: float = 1):
@@ -130,9 +148,17 @@ def execute(run_path, metrics_keys=None, tests=None, rotation_metrics=True):
             vars=['error_x', 'error_y'],
             func=calculate_norm,
         ),
+        error_xy_all=dict(
+            vars=['error_x', 'error_y'],
+            func=calculate_norm_individual,
+        ),
         error_ang=dict(
             vars=['error_ang'],
             func=calculate_norm,
+        ),
+        error_ang_all=dict(
+            vars=['error_ang'],
+            func=calculate_norm_individual,
         ),
         ss_error_xy=dict(
             vars=['error_x', "reference_x", 'error_y', "reference_y"],

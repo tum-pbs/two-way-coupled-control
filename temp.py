@@ -1,2 +1,0 @@
-print('lala')
-print('done')
