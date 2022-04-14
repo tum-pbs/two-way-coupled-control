@@ -65,8 +65,8 @@ parser.add_argument("--colors", "-c", nargs='+', help="Color of bar plots")
 args = parser.parse_args()
 root = args.root
 test = args.test
-folders = args.folders
-colors = dict(zip(folders, args.colors))
+folders = args.folders[::-1]
+colors = dict(zip(folders, args.colors[::-1]))
 # %% Final plot parameters
 offsets = np.linspace(0, 1, len(folders))
 offsets -= 0.5
@@ -74,6 +74,7 @@ offsets *= 0.25
 bar_width = offsets[1] - offsets[0]
 offsets = iter(-offsets)
 # %% Loop through folders and create bar plot
+os.makedirs(os.path.join(root, 'figs'), exist_ok=True)
 for folder in folders:
     test_folder = natsorted([folder for folder in os.listdir(f"{root}/{folder}/tests") if folder.split("_")[0] == f"test{test}"])[-1]
     # test_folder = f"test{test}_{model}"
