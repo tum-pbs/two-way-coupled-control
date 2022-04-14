@@ -1,16 +1,14 @@
 
-from Plotter import Plotter
-import shutil
+from neural_control.visualization.Plotter import Plotter
 from shutil import copyfile
-
 from natsort import natsorted
 from numpy import pi
 from scipy.interpolate import CubicSpline
 import matplotlib.pyplot as plt
-from TwoWayCouplingSimulation import *
-from InputsManager import InputsManager
+from neural_control.misc.TwoWayCouplingSimulation import *
+from neural_control.InputsManager import InputsManager
 import time
-from misc_funcs import rotate
+from neural_control.misc.misc_funcs import rotate
 
 
 class Generator(TwoWayCouplingSimulation):
@@ -245,20 +243,20 @@ if __name__ == "__main__":
     inp.supervised["destinations"] = destinations
     objective_angles = velocities[:, :, 0:1] * 0
     # Generate trajectories angle
-    if not inp.translation_only:
-        objective_angles = gen.create_objective_angle(inp.supervised["n_simulations"])
-        # Duplicate in order to use the same functions used for generating velocities
-        objective_angles2 = [[-value, -value] for value in objective_angles]  # I need to invert the sign because of phiflow left hand convetion
-        ang_velocities = gen.create_trajectories(
-            int(inp.supervised['dataset_n_steps'] / 2 + 1),
-            objective_angles2,
-            (0, 0),
-            inp.simulation['dt'])
-        shape_concat = list(ang_velocities.shape)
-        shape_concat[1] = inp.supervised['dataset_n_steps'] - shape_concat[1]
-        ang_velocities = np.concatenate((ang_velocities, np.zeros(shape_concat)), axis=1)
-        ang_velocities = ang_velocities[:, :, 0]
-        inp.supervised['objective_angles'] = objective_angles
+    objective_angles = gen.create_objective_angle(inp.supervised["n_simulations"])
+    # Duplicate in order to use the same functions used for generating velocities
+    objective_angles2 = [[-value, -value] for value in objective_angles]  # I need to invert the sign because of phiflow left hand convetion
+    ang_velocities = gen.create_trajectories(
+        int(inp.supervised['dataset_n_steps'] / 2 + 1),
+        objective_angles2,
+        (0, 0),
+        inp.simulation['dt'])
+    shape_concat = list(ang_velocities.shape)
+    shape_concat[1] = inp.supervised['dataset_n_steps'] - shape_concat[1]
+    ang_velocities = np.concatenate((ang_velocities, np.zeros(shape_concat)), axis=1)
+    ang_velocities = ang_velocities[:, :, 0]
+    inp.supervised['objective_angles'] = objective_angles
+    if inp.translation_only: ang_velocities *= 0
     inp.export(inp.supervised["dataset_path"] + "inputs.json")
     current = time.time()
     for i, (velocity, ang_velocity) in enumerate(zip(velocities, ang_velocities)):
@@ -297,6 +295,6 @@ if __name__ == "__main__":
                 remaining_h = np.floor(remaining / 60. / 60.)
                 remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
                 current = time.time()
-                print(f'{j} step of {i} case')
+                print(f'{j} step of case {i}')
                 print(" Time remaining: %dh %dmin" % (remaining_h, remaining_m))
     print('done')
