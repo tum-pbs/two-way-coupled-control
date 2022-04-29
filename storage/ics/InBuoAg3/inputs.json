@@ -1,0 +1,68 @@
+{
+    "export_stride": 50,
+    "simulation": {
+        "path": "/home/ramos/phiflow/storage/baseline_box_two_obstacles2/",
+        "n_steps": 7501,
+        "re": 5000,
+        "tripping_on": false,
+        "obs_density": 0.3,
+        "reference_velocity": 3,
+        "inflow_on": true,
+        "dt": 0.05,
+        "obs_type": "box",
+        "obs_width": 20,
+        "obs_height": 6,
+        "time_step_scheme": "RK2",
+        "second_obstacle": {
+            "xy": [
+                35,
+                50
+            ],
+            "ang_vel": 0.2,
+            "width": 5,
+            "height": 30
+        },
+        "domain_size": [
+            175,
+            110
+        ],
+        "obs_xy": [
+            120,
+            50
+        ],
+        "sponge_intensity": 0.05,
+        "sponge_size": [
+            0,
+            5,
+            5,
+            5
+        ],
+        "obs_mass": 36.0,
+        "obs_inertia": 4000
+    },
+    "export_vars": [
+        "pressure",
+        "vx",
+        "vy",
+        "obs_mask",
+        "obs_xy",
+        "obs_vx",
+        "obs_vy",
+        "control_force_x",
+        "control_force_y",
+        "fluid_force_x",
+        "fluid_force_y",
+        "reference_x",
+        "reference_y",
+        "loss",
+        "loss_velocity",
+        "loss_spatial",
+        "error_x",
+        "error_y",
+        "loss_ang",
+        "loss_ang_vel",
+        "vorticity",
+        "cfl",
+        "fluid_torque"
+    ]
+}
