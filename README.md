@@ -48,7 +48,13 @@ Intermediate models are saved during training before all iterations are performe
 All parameters for training are set in *inputs.json*, especially in the "unsupervised" session.
 
 # Tests
-Running test simulations can be performed by
+Before running the tests, it is necessary to generate the *tests.json* that contains all tests parameters by running
+
+```
+python neural_control/testing/generate_tests.py
+```
+
+After that, a test simulations can be performed by executing
 
 ```
 python neural_control/testing/test_networks.py path/to/model/folder/ model_index tests_id
