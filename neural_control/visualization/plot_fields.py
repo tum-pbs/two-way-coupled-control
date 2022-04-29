@@ -11,7 +11,8 @@ import argparse
 plt.rcParams['text.usetex'] = True
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams.update({'font.size': 20})
-width = 4
+# width = 4
+width = 2
 height = 1.8
 plot_elements = [
     # 'forces',
@@ -220,10 +221,10 @@ for folder in folders:
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 # Make room for colorbar
-                fig.subplots_adjust(right=0.8)
+                # fig.subplots_adjust(right=0.8)
                 # Add color bar
-                cax = fig.add_axes([ax.get_position().x1 + 0.04, ax.get_position().y0, 0.02, ax.get_position().y1 - ax.get_position().y0])
-                cbar = fig.colorbar(field_image, cax=cax, ticks=[imshow_kwargs['vmin'], 0, imshow_kwargs['vmax']])
+                # cax = fig.add_axes([ax.get_position().x1 + 0.04, ax.get_position().y0, 0.02, ax.get_position().y1 - ax.get_position().y0])
+                # cbar = fig.colorbar(field_image, cax=cax, ticks=[imshow_kwargs['vmin'], 0, imshow_kwargs['vmax']])
                 # cbar.ax.set_yticklabels([imshow_kwargs['vmin'], cbar_labels[field_name], imshow_kwargs['vmax']])
                 # Now add transparency and mask
                 field_image.set_alpha(1 - mask)

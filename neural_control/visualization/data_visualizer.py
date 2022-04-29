@@ -16,7 +16,7 @@ from Plotter import Plotter
 from torch.nn.functional import pad
 
 
-class Interactive_Data_Reader(Tk):
+class Interactive_Data_Visualizer(Tk):
     def __init__(self, log_path: str, window_size: str, matplotlib_area_size: tuple, font_size: int = 8):
         """
         Initialize GUI
@@ -27,10 +27,10 @@ class Interactive_Data_Reader(Tk):
             matplotlib_area_size: size of matplotlib area
 
         """
-        super(Interactive_Data_Reader, self).__init__()
+        super(Interactive_Data_Visualizer, self).__init__()
         self.log_path = os.path.abspath(log_path)
         self.log_variables = ["dataPath", "sModel", "sVar", "sAxis", "sPlotType", "sKwargs", "iUpdatePlot", "iUseTestData", "sTest"]
-        self.title("Interactive_Data_Reader")
+        self.title("Data Visualizer")
         self.nAxis = 6
         self.nMaxLoadedVariables = 30
         self.geometry(window_size)
@@ -168,10 +168,10 @@ class Interactive_Data_Reader(Tk):
         self.bUpdatePlot.config(bg="#cf5f5f")
         self.bUpdatePlot.grid(padx=3, pady=3, sticky="nsew", row=2, column=1)
         # Button for updating/reloading matplotlib plot
-        self.bReloadVariables = Button(clicks, text="Reload plots")
+        self.bReloadVariables = Button(clicks, text="Redraw plots")
         self.bReloadVariables.grid(padx=3, pady=3, sticky="nsew", row=2, column=3)
         # Button for updating/reloading matplotlib plot
-        self. bToggleRefresh = Button(clicks, text="Refresh all")
+        self. bToggleRefresh = Button(clicks, text="Tick all")
         self.bToggleRefresh.grid(padx=3, pady=3, sticky="nsew", row=2, column=2)
         # Simulation selector
         self.oModelSelector = OptionMenu(clicks, self.sModel, " ")
@@ -196,19 +196,19 @@ class Interactive_Data_Reader(Tk):
         for i in range(self.nMaxLoadedVariables):
             self.oVarSelector += [OptionMenu(clicks, self.sVar[i], " ")]
             self.oVarSelector[i].config(width=20)
-            self.oVarSelector[i].grid(padx=3, pady=3, sticky="nsew", column=1, row=4 + i)
+            self.oVarSelector[i].grid(padx=3, pady=3, sticky="nsew", column=0, row=4 + i)
             self.iUpdatePlot += [IntVar()]
             self.iUpdatePlot[i].set(1)
             checkButton = Checkbutton(clicks, variable=self.iUpdatePlot[i])
-            checkButton.grid(padx=3, pady=3, sticky="nsew", column=2, row=i + 4)
-            self.bRefresh += [Button(clicks, text='Refresh')]
+            checkButton.grid(padx=3, pady=3, sticky="nsew", column=1, row=i + 4)
+            self.bRefresh += [Button(clicks, text='Draw')]
             self.oAxisSelector += [OptionMenu(clicks, self.sAxis[i], *[str(x) for x in range(self.nAxis)])]
-            self.oAxisSelector[i].grid(padx=3, pady=3, sticky="nsew", column=3, row=i + 4)
-            self.bRefresh[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=4)
+            self.oAxisSelector[i].grid(padx=3, pady=3, sticky="nsew", column=2, row=i + 4)
+            self.bRefresh[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=3)
             self.oPlotType += [OptionMenu(clicks, self.sPlotType[i], *self.plot_options)]
-            self.oPlotType[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=5, columnspan=1)
+            self.oPlotType[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=4, columnspan=1)
             self.eKwargs += [Entry(clicks, textvariable=self.sKwargs[i], width=20)]
-            self.eKwargs[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=6, columnspan=1)
+            self.eKwargs[i].grid(padx=3, pady=3, sticky="nsew", row=i + 4, column=5, columnspan=1)
         # Matplotlib stuff
 
         # Get tk window size in inches
@@ -387,9 +387,9 @@ class Interactive_Data_Reader(Tk):
         # Models
         try:
             models = os.listdir(path)
-        except:
+        except FileNotFoundError:
             print("Invalid path")
-            pass
+            return
         models = [file for file in models if "." not in file]  # Get folders only
         models = natsorted(models, key=lambda x: x.lower())
         update_dropdown(self.oModelSelector, self.sModel, models)
@@ -866,6 +866,5 @@ class Interactive_Data_Reader(Tk):
 if __name__ == '__main__':
     # TODO create test
     log_path = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
-    gui = Interactive_Data_Reader(log_path, "2300x1200", (10, 10))
-    # gui = Interactive_Data_Reader(log_path, "2600x500")
+    gui = Interactive_Data_Visualizer(log_path, "2300x1200", (10, 10))
     gui.mainloop()

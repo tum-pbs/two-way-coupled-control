@@ -1,7 +1,7 @@
 import os
 import numpy as np
-from InputsManager import InputsManager
-from TwoWayCouplingSimulation import TwoWayCouplingSimulation
+from neural_control.InputsManager import InputsManager
+from neural_control.misc.TwoWayCouplingSimulation import TwoWayCouplingSimulation
 import torch
 if __name__ == "__main__":
     export_vars = [
@@ -55,7 +55,7 @@ if __name__ == "__main__":
             simulation.calculate_fluid_forces()
             # simulation.apply_forces()
             if i % inp.export_stride == 0:
-                print(i)
+                print(f'Exporting timestep: {i}')
                 print("\n")
                 simulation.export_data(inp.simulation['path'], 0, int(i / inp.export_stride), delete_previous=i == 0, ids=export_vars)
     inp.export(inp.simulation['path'] + "/inputs.json", only=['simulation', 'probes', 'export'])
