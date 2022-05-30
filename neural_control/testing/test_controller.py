@@ -99,8 +99,9 @@ if __name__ == "__main__":
         # ------------------ Simulate ------------------
         # ----------------------------------------------
         with torch.no_grad():
-            is_first_export = True  # Used for deleting previous files on folder
+            is_first_export = True  # Used for deleting previous files on folder TODO
             for test_i, test_attrs in enumerate(value for key, value in test.items() if 'case' in key):
+                # if test_i != 1: continue
                 export_stride = test_attrs["export_stride"] if test_attrs.get("export_stride") else inp.export_stride
                 controller.reset()
                 smoke_attrs = test_attrs['smoke']
@@ -120,7 +121,7 @@ if __name__ == "__main__":
                         sim.add_smoke(xy, smoke_attrs['width'], smoke_attrs['height'], smoke_attrs['inflow'])
                     if "smoke" not in export_vars: export_vars.append("smoke")
                 control_force = torch.zeros(2).to(device)
-                control_force_global = torch.zeros(2).to(device)
+                control_force_global = np.zeros(2)
                 control_torque = torch.zeros(1).to(device)
                 last_objective = test_attrs['positions'][0]
                 for i in range(test_attrs['n_steps']):
@@ -133,7 +134,8 @@ if __name__ == "__main__":
                     if last_objective != x_objective_:
                         last_objective = x_objective_
                         controller.reset()
-                    sim.apply_forces(control_force_global, control_torque)
+                    add_forces = calculate_additional_forces(test_attrs.get('add_forces', {}), i).cpu().numpy()
+                    sim.apply_forces(control_force_global + add_forces, control_torque)
                     sim.advect()
                     sim.make_incompressible()
                     sim.calculate_fluid_forces()
@@ -160,6 +162,7 @@ if __name__ == "__main__":
                     sim.reference_x = x_objective[0]
                     sim.reference_y = x_objective[1]
                     sim.error_x, sim.error_y = error_xy.native()
+                    sim.add_forces_x, sim.add_forces_y = add_forces
                     sim.control_force_x, sim.control_force_y = control_force_global
                     if not inp.translation_only:
                         sim.reference_ang = ang_objective
@@ -175,7 +178,7 @@ if __name__ == "__main__":
                         remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
                         print(f"Time left: {remaining_h:.0f}h and {remaining_m:.0f} min - i: {i}")
                         export_vars_ = export_vars
-                    sim.export_data(export_path, test_i, i, export_vars_, is_first_export)
+                    sim.export_data(export_path, test_i, i, export_vars_ + ['add_forces_x', 'add_forces_y'], is_first_export)
                     is_first_export = False
 
     print("Done")

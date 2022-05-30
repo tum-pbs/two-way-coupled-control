@@ -1,5 +1,7 @@
 myscripts/
-storage/
+storage/*
+!storage/ics/
+!storage/trained_models/
 phiflow2/*
 *.pyc
 *.tmp

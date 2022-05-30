@@ -17,7 +17,8 @@ if __name__ == "__main__":
         # "obs_vx",
         "obs2_xy",
         "obs2_ang",
-        "obs2_ang_vel"
+        "obs2_ang_vel",
+        "obs_ang"
     ]
     simulation = TwoWayCouplingSimulation("GPU")
     inp = InputsManager(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json", ['simulation'])
@@ -28,6 +29,7 @@ if __name__ == "__main__":
         inp.simulation['obs_height'],
         obs_xy=inp.simulation['obs_xy'],
     )
+    obs_angle = inp.simulation.get('obs_angle', 0) / 180 * np.pi
     simulation.setup_world(
         inp.simulation['re'],
         inp.simulation['domain_size'],
@@ -38,6 +40,7 @@ if __name__ == "__main__":
         inp.simulation['sponge_intensity'],
         inp.simulation['sponge_size'],
         inp.simulation['inflow_on'],
+        angle=obs_angle
     )
     # Add a second box at the inflow boundary
     if inp.simulation.get('second_obstacle', False):

@@ -34,7 +34,7 @@ Inputs required to run most scripts are grouped in the file *neural_control/inpu
 # Generate Initial Conditions
 Simulations used as initial conditions are performed by executing
 ```
-python neural_control/mic/generate_ic.py
+python neural_control/misc/generate_ic.py
 ```
 Inputs necessary for generating initial conditions for training and test environments can be found in the "simulation" section of *inputs.json*. All initial conditions used in our paper can be found on *storage/ics/*.
 # Training
@@ -63,18 +63,14 @@ python neural_control/testing/test_networks.py path/to/model/folder/ model_index
 The table below summerizes all tests available with their respective IDs.
 
 
-| Tag                    | Test ID | DoF | Re   | N Simulations | Buoyancy | Inflow | Agitator |
-| ---------------------- | ------- | --- | ---- | ------------- | -------- | ------ | -------- |
-| Ba2                    | 1       | 2   | 1000 | 20            |          |        |          |
-| Buo2_OneSimulation     | 2       | 2   | 1000 | 1             | ✔        |        |          |
-| Ba3                    | 3       | 3   | 1000 | 20            |          |        |          |
-| In3_OneSimulation      | 4       | 3   | 3000 | 1             |          | ✔      |          |
-| InBuo3_OneSimulation   | 5       | 3   | 3000 | 1             | ✔        | ✔      |          |
-| InBuoAg3_OneSimulation | 6       | 3   | 5000 | 1             | ✔        | ✔      | ✔        |
-| In3                    | 7       | 3   | 3000 | 5             |          | ✔      |          |
-| InBuo3                 | 8       | 3   | 3000 | 5             | ✔        | ✔      |          |
-| InBuoAg3               | 9       | 3   | 5000 | 5             | ✔        | ✔      | ✔        |
-| Buo2                   | 10      | 2   | 1000 | 5             | ✔        |        |          |
+| Tag    | Test ID |  DoF  |  Re   | N Simulations | Inflow | Buoyancy | Forcing |
+| :----- | :-----: | :---: | :---: | :-----------: | :----: | :------: | :-----: |
+| BaseNR |    1    |   2   | 1000  |      20       |        |          |         |
+| BuoyNR |    2    |   2   | 1000  |       5       |        |    ✔     |         |
+| Base   |    3    |   3   | 1000  |      20       |        |          |         |
+| Inflow |    4    |   3   | 3000  |       5       |   ✔    |          |         |
+| InBuoy |    5    |   3   | 3000  |       5       |   ✔    |    ✔     |         |
+| Hold   |    6    |   3   | 3000  |       5       |   ✔    |    ✔     |    ✔    |
 
 After running the desired tests, calculate the metrics with
 ```
@@ -82,7 +78,7 @@ python neural_control/misc/group_frames.py /path/to/model/folder/
 python neural_control/misc/calculate_metrics.py /path/to/model/folder/
 ```
 
-This will calculate all metrics and export them to /path/to/model/folder/tests/test#_#/metrics.json.
+This will calculate all metrics and export them to */path/to/model/folder/tests/test#_#/metrics.json*.
 
 # Visualization
 Simulations can be quickly visualized with an interactive data visualizer GUI by

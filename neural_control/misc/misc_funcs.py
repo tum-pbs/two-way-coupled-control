@@ -245,3 +245,24 @@ def get_weights_and_biases(model):
         weights[f'layer_{i}_W'] = layer.weight.detach()
         biases[f'layer_{i}_b'] = layer.bias.detach()
     return weights, biases
+
+
+def calculate_additional_forces(attrs: dict, n: int):
+    """
+    Calculate additional forces for simulation.
+
+    Parameters:
+        attrs: dictionary with attributes
+    """
+    additional_forces = torch.tensor((0.0, 0.0))
+    force_function = dict(
+        constant=lambda direction, t: torch.tensor(direction),
+        rotating=lambda direction, t: torch.tensor((np.cos(t / 2000 * np.pi * 2), np.sin(t / 2000 * np.pi * 2))),
+    )
+    if attrs != {}:
+        for force_parameters in attrs:
+            if n <= force_parameters['start']: continue
+            if n > force_parameters['start'] + force_parameters['duration']: continue
+            n_local = n - force_parameters['start']
+            additional_forces = additional_forces + force_function[force_parameters['mode']](force_parameters['direction'], n_local) * force_parameters['strength']
+    return additional_forces

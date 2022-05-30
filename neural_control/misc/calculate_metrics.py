@@ -61,15 +61,19 @@ def calculate_norm_individual(x: np.array, y: np.array = 0, normalizing_factor: 
     return (z,), ('',)
 
 
-def calculate_ss(x: np.array, reference_x: np.array, y: np.array = 0, reference_y: np.array = None, normalizing_factor: float = 1):
+def calculate_ss(x: np.array, reference_x: np.array, y: np.array = 0, reference_y: np.array = None, normalizing_factor: float = 1, discard_size=0.25):
     """
     Steady steady error calculated by averaging error without considering the first
     25% of the trajectory after an objective is set.
 
     Params:
-        x: x component of error
-        y: y component of error
+        x: x component
+        reference_x: reference x component
+        y: y component
+        reference_y: reference y component
         normalizing_factor: normalizing factor
+        discard_size: size of the the trajectory to be discarded
+
 
     Returns:
         (last_mean_error, last_sigma) : spatial error xy and its standard deviation
@@ -82,17 +86,17 @@ def calculate_ss(x: np.array, reference_x: np.array, y: np.array = 0, reference_
     objective_changes = np.linalg.norm(objectives[:, 1:, :] - objectives[:, :-1:], axis=-1) > 1e-6
     n_sections = 1
     n_sections += np.size(np.where(objective_changes[0] == 1))
-    # Calculate the size of chunk of data that will be discarded
-    ss_i = 0.25
-    deleted_chunk_size = int(x.shape[1] / n_sections * ss_i)
-    section_size = int(x.shape[1] / n_sections)
-    delete_i = [k * section_size for k in range(n_sections)]
-    delete_i_all = []
-    for k in delete_i:
-        for l in range(deleted_chunk_size):
-            delete_i_all.append(k + l)
     z = np.sqrt(x**2 + y**2) / normalizing_factor
-    z = np.delete(z, delete_i_all, axis=1)
+    # Calculate the size of chunk of data that will be discarded
+    if discard_size > 0:
+        deleted_chunk_size = int(x.shape[1] / n_sections * discard_size)
+        section_size = int(x.shape[1] / n_sections)
+        delete_i = [k * section_size for k in range(n_sections)]
+        delete_i_all = []
+        for k in delete_i:
+            for l in range(deleted_chunk_size):
+                delete_i_all.append(k + l)
+        z = np.delete(z, delete_i_all, axis=1)
     mean = np.mean(z, axis=0)
     # Average all tests
     std = np.std(mean)
@@ -168,6 +172,16 @@ def execute(run_path, metrics_keys=None, tests=None, rotation_metrics=True):
             vars=['error_ang', "reference_ang"],
             func=calculate_ss,
         ),
+        avg_error_xy=dict(
+            vars=['error_x', "reference_x", 'error_y', "reference_y"],
+            func=calculate_ss,
+            kwargs={'discard_size': 0}
+        ),
+        avg_error_ang=dict(
+            vars=['error_ang', "reference_ang"],
+            func=calculate_ss,
+            kwargs={'discard_size': 0}
+        ),
         forces_norm=dict(
             vars=['control_force_x', 'control_force_y'],
             # func=lambda xy: ((xy.swapaxes(1, 2),), ('',)),
@@ -233,7 +247,7 @@ def execute(run_path, metrics_keys=None, tests=None, rotation_metrics=True):
                     values_all[var] += [values]
                 values_all[var] = np.asarray(values_all[var])
             # Calculate metric
-            values, labels = func(*values_all.values(), )
+            values, labels = func(*values_all.values(), **attrs.get('kwargs', {}))
             for value, label in zip(values, labels):
                 export_dict[f"{metric_name}{label}"] = value.tolist()
         # Export metrics to json file

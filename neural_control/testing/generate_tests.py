@@ -26,14 +26,39 @@ if __name__ == "__main__":
             angles=lambda *args: (0,)
 
         ),
+        # test2=dict(
+        #     initial_conditions_path=root + "/storage/ics/Buo2/",
+        #     n_simulations=1,
+        #     tag='Buo2_OneSimulation',
+        #     help_i=lambda *args: -1,
+        #     export_stride=lambda *args: 20,
+        #     n_steps=lambda *args: 8001,
+        #     positions=lambda i: [[30, 30, ], [30, 60], [50, 30], [50, 60]],
+        #     i=lambda *args: [-1, 2000, 4000, 6000],
+        #     angles=lambda *args: [np.pi / 4, -np.pi / 4, np.pi, 0],
+        #     smoke=lambda *args: dict(
+        #         on=True,
+        #         xy=[[0.5, 0.1]],
+        #         inflow=0.01,
+        #         width=60,
+        #         height=6,
+        #         buoyancy=(0, 0.02),
+        #     )
+        # ),
         test2=dict(
             initial_conditions_path=root + "/storage/ics/Buo2/",
-            n_simulations=1,
-            tag='Buo2_OneSimulation',
+            n_simulations=5,
+            tag='BuoyNR',
             help_i=lambda *args: -1,
             export_stride=lambda *args: 20,
             n_steps=lambda *args: 8001,
-            positions=lambda i: [[30, 30, ], [30, 60], [50, 30], [50, 60]],
+            positions=lambda i: [
+                [[30, 30], [50, 60], [30, 60], [50, 30]],
+                [[30, 60], [50, 30], [30, 30], [50, 60]],
+                [[50, 30], [50, 60], [30, 60], [30, 30]],
+                [[50, 60], [30, 30], [50, 30], [30, 60]],
+                [[30, 30], [50, 30], [30, 60], [50, 60]],
+            ][i],
             i=lambda *args: [-1, 2000, 4000, 6000],
             angles=lambda *args: [np.pi / 4, -np.pi / 4, np.pi, 0],
             smoke=lambda *args: dict(
@@ -59,56 +84,56 @@ if __name__ == "__main__":
             n_steps=lambda *args: 1001,
             angles=lambda *args: (randomGenerator.rand(1) * 2 * 3.14159 - 3.14159).tolist()
         ),
+        # test4=dict(
+        #     initial_conditions_path=root + "/storage/ics/In3/",
+        #     n_simulations=1,
+        #     tag='In3_OneSimulation',
+        #     positions=lambda i: [[75, 40], [75, 70], [120, 40], [120, 70]],
+        #     i=lambda *args: [-1, 2000, 4000, 6000],
+        #     smoke=lambda *args: dict(
+        #         on=False,
+        #     ),
+        #     n_steps=lambda *args: 8001,
+        #     export_stride=lambda *args: 20,
+        #     angles=lambda *args: [1.047197, -1.047197, 2.09439, -1.57079]
+        # ),
+        # test5=dict(
+        #     initial_conditions_path=root + "/storage/ics/In3/",
+        #     n_simulations=1,
+        #     tag='InBuo3_OneSimulation',
+        #     positions=lambda i: [[75, 40], [75, 70], [120, 40], [120, 70]],
+        #     i=lambda *args: [-1, 2000, 4000, 6000],
+        #     smoke=lambda *args: dict(
+        #         on=True,
+        #         xy=[[0.50, 0.2]],
+        #         inflow=0.01,
+        #         width=150,
+        #         height=6,
+        #         buoyancy=(0, 0.04),
+        #     ),
+        #     n_steps=lambda *args: 8001,
+        #     export_stride=lambda *args: 20,
+        #     angles=lambda *args: [1.047197, -1.047197, 2.09439, -1.57079]
+        # ),
+        # test6=dict(
+        #     initial_conditions_path=root + "/storage/ics/InBuoAg3/",
+        #     n_simulations=1,
+        #     tag='InBuoAg3_OneSimulation',
+        #     positions=lambda i: [[75, 40], [75, 70], [120, 40], [120, 70]],
+        #     i=lambda *args: [-1, 2000, 4000, 6000],
+        #     smoke=lambda *args: dict(
+        #         on=True,
+        #         xy=[[0.50, 0.2]],
+        #         inflow=0.01,
+        #         width=150,
+        #         height=6,
+        #         buoyancy=(0, 0.04),
+        #     ),
+        #     n_steps=lambda *args: 8001,
+        #     export_stride=lambda *args: 20,
+        #     angles=lambda *args: [1.047197, -1.047197, 2.09439, -1.57079]
+        # ),
         test4=dict(
-            initial_conditions_path=root + "/storage/ics/In3/",
-            n_simulations=1,
-            tag='In3_OneSimulation',
-            positions=lambda i: [[75, 40], [75, 70], [120, 40], [120, 70]],
-            i=lambda *args: [-1, 2000, 4000, 6000],
-            smoke=lambda *args: dict(
-                on=False,
-            ),
-            n_steps=lambda *args: 8001,
-            export_stride=lambda *args: 20,
-            angles=lambda *args: [1.047197, -1.047197, 2.09439, -1.57079]
-        ),
-        test5=dict(
-            initial_conditions_path=root + "/storage/ics/In3/",
-            n_simulations=1,
-            tag='InBuo3_OneSimulation',
-            positions=lambda i: [[75, 40], [75, 70], [120, 40], [120, 70]],
-            i=lambda *args: [-1, 2000, 4000, 6000],
-            smoke=lambda *args: dict(
-                on=True,
-                xy=[[0.50, 0.2]],
-                inflow=0.01,
-                width=150,
-                height=6,
-                buoyancy=(0, 0.04),
-            ),
-            n_steps=lambda *args: 8001,
-            export_stride=lambda *args: 20,
-            angles=lambda *args: [1.047197, -1.047197, 2.09439, -1.57079]
-        ),
-        test6=dict(
-            initial_conditions_path=root + "/storage/ics/InBuoAg3/",
-            n_simulations=1,
-            tag='InBuoAg3_OneSimulation',
-            positions=lambda i: [[75, 40], [75, 70], [120, 40], [120, 70]],
-            i=lambda *args: [-1, 2000, 4000, 6000],
-            smoke=lambda *args: dict(
-                on=True,
-                xy=[[0.50, 0.2]],
-                inflow=0.01,
-                width=150,
-                height=6,
-                buoyancy=(0, 0.04),
-            ),
-            n_steps=lambda *args: 8001,
-            export_stride=lambda *args: 20,
-            angles=lambda *args: [1.047197, -1.047197, 2.09439, -1.57079]
-        ),
-        test7=dict(
             initial_conditions_path=root + "/storage/ics/In3/",
             n_simulations=5,
             tag='In3',
@@ -138,7 +163,7 @@ if __name__ == "__main__":
                 [1.047197, 2.09439, -1.57079, -1.047197],
             ][i],
         ),
-        test8=dict(
+        test5=dict(
             initial_conditions_path=root + "/storage/ics/In3/",
             n_simulations=5,
             tag='InBuo3',
@@ -168,18 +193,44 @@ if __name__ == "__main__":
                 [1.047197, 2.09439, -1.57079, -1.047197],
             ][i],
         ),
-        test9=dict(
-            initial_conditions_path=root + "/storage/ics/InBuoAg3/",
-            n_simulations=5,
-            tag='InBuoAg3',
+        # test9=dict(
+        #     initial_conditions_path=root + "/storage/ics/InBuoAg3/",
+        #     n_simulations=5,
+        #     tag='InBuoAg3',
+        #     positions=lambda i: [
+        #         [[75, 40], [75, 70], [120, 40], [120, 70]],
+        #         [[75, 70], [120, 70], [75, 40], [120, 40]],
+        #         [[120, 40], [75, 40], [75, 70], [120, 70]],
+        #         [[120, 70], [75, 40], [75, 70], [120, 40]],
+        #         [[75, 40], [120, 70], [75, 70], [120, 40]],
+        #     ][i],
+        #     i=lambda *args: [-1, 2000, 4000, 6000],
+        #     smoke=lambda *args: dict(
+        #         on=True,
+        #         xy=[[0.50, 0.2]],
+        #         inflow=0.01,
+        #         width=150,
+        #         height=6,
+        #         buoyancy=(0, 0.04),
+        #     ),
+        #     n_steps=lambda *args: 8001,
+        #     export_stride=lambda *args: 20,
+        #     angles=lambda i: [
+        #         [1.047197, -1.047197, 2.09439, -1.57079],
+        #         [-1.047197, 1.047197, 2.09439, -1.57079],
+        #         [2.09439, 1.047197, -1.57079, -1.047197],
+        #         [-1.57079, 1.047197, -1.047197, 2.09439, ],
+        #         [1.047197, 2.09439, -1.57079, -1.047197],
+        #     ][i],
+        # ),
+        test6=dict(
+            initial_conditions_path=root + "/storage/ics/In3/",
+            n_simulations=1,
+            tag='Hold',
             positions=lambda i: [
-                [[75, 40], [75, 70], [120, 40], [120, 70]],
-                [[75, 70], [120, 70], [75, 40], [120, 40]],
-                [[120, 40], [75, 40], [75, 70], [120, 70]],
-                [[120, 70], [75, 40], [75, 70], [120, 40]],
-                [[75, 40], [120, 70], [75, 70], [120, 40]],
+                [[120, 50]],
             ][i],
-            i=lambda *args: [-1, 2000, 4000, 6000],
+            i=lambda *args: [-1],
             smoke=lambda *args: dict(
                 on=True,
                 xy=[[0.50, 0.2]],
@@ -188,40 +239,35 @@ if __name__ == "__main__":
                 height=6,
                 buoyancy=(0, 0.04),
             ),
-            n_steps=lambda *args: 8001,
+            n_steps=lambda *args: 10001,
             export_stride=lambda *args: 20,
             angles=lambda i: [
-                [1.047197, -1.047197, 2.09439, -1.57079],
-                [-1.047197, 1.047197, 2.09439, -1.57079],
-                [2.09439, 1.047197, -1.57079, -1.047197],
-                [-1.57079, 1.047197, -1.047197, 2.09439, ],
-                [1.047197, 2.09439, -1.57079, -1.047197],
+                [0],
             ][i],
-        ),
-        test10=dict(
-            initial_conditions_path=root + "/storage/ics/Buo2/",
-            n_simulations=5,
-            tag='Buo2',
-            help_i=lambda *args: -1,
-            export_stride=lambda *args: 20,
-            n_steps=lambda *args: 8001,
-            positions=lambda i: [
-                [[30, 30], [30, 60], [50, 30], [50, 60]],
-                [[30, 60], [50, 30], [30, 30], [50, 60]],
-                [[50, 30], [50, 60], [30, 60], [30, 30]],
-                [[50, 60], [30, 30], [50, 30], [30, 60]],
-                [[30, 30], [50, 30], [30, 60], [50, 60]],
-            ][i],
-            i=lambda *args: [-1, 2000, 4000, 6000],
-            angles=lambda *args: [np.pi / 4, -np.pi / 4, np.pi, 0],
-            smoke=lambda *args: dict(
-                on=True,
-                xy=[[0.5, 0.1]],
-                inflow=0.01,
-                width=60,
-                height=6,
-                buoyancy=(0, 0.02),
-            )
+            add_forces=lambda *args: [
+                {  # Push
+                    'start': 2000,
+                    'duration': 100,
+                    'mode': 'constant',
+                    'strength': 25,
+                    'direction': [0, 1],
+                },
+                {  # Push and hold
+                    'start': 4000,
+                    'duration': 2000,
+                    'mode': 'constant',
+                    'strength': 25.,
+                    'direction': [1, 0],
+
+                },
+                {  # Push and change direction
+                    'start': 7000,
+                    'duration': 2000,
+                    'mode': 'rotating',
+                    'strength': 25.,
+                    'direction': [0, 0],
+                },
+            ]
         ),
     )
 

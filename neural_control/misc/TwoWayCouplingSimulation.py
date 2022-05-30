@@ -132,7 +132,8 @@ class TwoWayCouplingSimulation:
         sponge_intensity: float,
         sponge_size: list,
         inflow_on: bool = True,
-        buoyancy: float = (0, 0)
+        buoyancy: float = (0, 0),
+        angle: float = 0
     ):
         """
         Setup world for simulation with a box on it
@@ -177,6 +178,7 @@ class TwoWayCouplingSimulation:
             lower = torch.as_tensor([self.ic["obs_xy"][0] - self.ic["obs_w"] / 2, self.ic["obs_xy"][1] - self.ic["obs_h"] / 2]).to(self.device)
             upper = torch.as_tensor([self.ic["obs_xy"][0] + self.ic["obs_w"] / 2, self.ic["obs_xy"][1] + self.ic["obs_h"] / 2]).to(self.device)
             geometry = Box(lower, upper).rotated(self.ic["obs_ang"][0])
+            geometry = geometry.rotated(angle)
         elif self.ic['obs_type'] == "disc":
             geometry = Sphere(torch.as_tensor(self.ic["obs_xy"]).to(self.device), torch.as_tensor(self.ic["obs_w"]).to(self.device))
         self.obstacle = Obstacle(
@@ -231,6 +233,58 @@ class TwoWayCouplingSimulation:
         self.sponge_mask = (masks[0] > 0) * (1, 0) + (masks[1] > 0) * (0, 1) + (masks[2] * (1, 0) > 0) + (masks[3] * (0, 1) > 0)
         self.sponge = (masks[0] * (1, 0) + masks[1] * (0, 1) + masks[2] * (1, 0) + masks[3] * (0, 1)) * sponge_intensity  # * dt
         # self.sponge = (self.sponge_normal_mask * self.sponge_normal_mask) * sponge_intensity * dt
+
+    # def step(self):
+    #     def advection(velocity, field=None):
+    #         u = velocity.x.values
+    #         v = velocity.y.values
+    #         if field:
+    #             df_dx, df_dy = spatial_gradient(field, CenteredGrid).unstack("vector")
+    #             u = (u[1:, :] + u[:-1, :]) / 2
+    #             v = (v[:, 1:] + v[:, :-1]) / 2
+    #             result = -1. * (u * df_dx + v * df_dy)
+    #             result = self.domain.scalar_grid(result)
+    #         else:
+    #             du_dx, du_dy = spatial_gradient(velocity.x, CenteredGrid).unstack("vector")
+    #             dv_dx, dv_dy = spatial_gradient(velocity.y, CenteredGrid).unstack("vector")
+    #             du_dx, du_dy = du_dx.values, du_dy.values
+    #             dv_dx, dv_dy = dv_dx.values, dv_dy.values
+    #             v_at_u = (v[:, 1:] + v[:, :-1]) / 2.  # v at center node
+    #             v_at_u = (v_at_u[1:, :] + v_at_u[:-1, :]) / 2.  # Values at u nodes without boundaries
+    #             bc_v_left = math.zeros(x=1, y=v_at_u.shape[1])  # BC for v at left boundary
+    #             bc_v_right = v_at_u[-2:-1, :]  # Neumman BC for v at right boundary
+    #             v_at_u = math.concat((bc_v_left, v_at_u, bc_v_right), 'x')  # v at u nodes
+    #             u_at_v = (u[1:, :] + u[:-1, :]) / 2.  # u at center nodes
+    #             u_at_v = (u_at_v[:, 1:] + u_at_v[:, :-1]) / 2.
+    #             bc_u_top = u_at_v[:, -2:-1]
+    #             bc_u_bottom = u_at_v[:, 0:1]
+    #             u_at_v = math.concat((bc_u_bottom, u_at_v, bc_u_top), 'y')
+    #             result = math.channel_stack([
+    #                 -1. * (u * du_dx + v_at_u * du_dy),
+    #                 -1. * (u_at_v * dv_dx + v * dv_dy)], "vector")
+    #             # result = self.domain.staggered_grid(result, extrapolation=velocity.extrapolation)
+    #         return result  # , du_dx.values.native().cpu().numpy(), du_dy.values.native().cpu().numpy(), dv_dx.values.native().cpu().numpy(), dv_dy.values.native().cpu().numpy()
+
+    #     def gradient(field):
+    #         f = field.values
+    #         # df_dx
+    #         # Internal points
+    #         df_dx = f[1:, :] - f[:-1, :]
+    #         df_dy = f[:, 1:] - f[:, :-1]
+    #         # Boundary points
+    #         bc_left = f[0:1, :] * 0  # left boundary
+    #         bc_right = f[0:1, :] * 0  # right boundary
+    #         bc_top = f[:, 0:1] * 0  # top boundary
+    #         bc_bottom = f[:, 0:1] * 0  # bottom boundary
+    #         df_dx = math.concat((bc_left, df_dx, bc_right), 'x')
+    #         df_dy = math.concat((bc_bottom, df_dy, bc_top), 'y')
+    #         return math.channel_stack([df_dx, df_dy], "vector")
+
+    #     adv_term = advection(self.velocity)
+    #     pressure_term = gradient(self.pressure)
+    #     diffusion_term = math.laplace(self.velocity.values) * self.viscosity
+    #     self.velocity = self.velocity.copied_with(values=self.velocity.values + self.dt * (-pressure_term + adv_term + diffusion_term))
+    #     # pressure = self.make_incompressible(vel_p)
 
     def advect(self, tripping_on: bool = False):
         """
