@@ -1,10 +1,10 @@
 from collections import defaultdict
 import os
 from turtle import position
-from Dataset import Dataset
+# from Dataset import Dataset
 import numpy as np
 import json
-from InputsManager import InputsManager
+from neural_control.InputsManager import InputsManager
 
 if __name__ == "__main__":
     root = os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../../")

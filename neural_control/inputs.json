@@ -1,10 +1,10 @@
 {
-    "translation_only": true,
+    "translation_only": false,
     "architecture": "fc_only",
-    "past_window": 2,
+    "past_window": 3,
     "resume_training": false,
     "export_stride": 50,
-    "max_acc": 1,
+    "max_acc": 1.5,
     "max_ang_acc": 0.05,
     "device": "GPU",
     "bypass_tanh": false,
@@ -13,47 +13,50 @@
         "obs_vy",
         "error_x",
         "error_y",
+        "obs_ang_vel",
+        "error_ang",
         "control_force_x",
-        "control_force_y"
+        "control_force_y",
+        "control_torque"
     ],
     "unsupervised": {
-        "simulation_path": "/home/ramos/phiflow/storage/baseline_disc/",
+        "simulation_path": "/home/ramos/phiflow/storage/ics/training_3dof/",
         "destinations_zone_growrate": 0.33,
-        "simulation_dropout": 1.0,
         "n_timesteps": 1000,
-        "lr_half_life": 1500,
-        "n_iterations": 15001,
-        "model_export_stride": 1500,
-        "learning_rate": 0.0005,
-        "n_before_backprop": 8,
+        "simulation_dropout": 1.0,
+        "lr_half_life": 1000,
+        "n_iterations": 5001,
+        "learning_rate": 0.01,
+        "n_before_backprop": 16,
+        "model_export_stride": 500,
         "optimizer": "AdamW",
         "destinations_margins": [
             20,
             20
         ],
         "hyperparams": {
-            "spatial": 15,
+            "spatial": 5,
             "velocity": 5,
             "force": 0.1,
-            "delta_force": 0.0,
+            "delta_force": 1.0,
+            "torque": 0.5,
             "angle": 30,
-            "torque": 0,
-            "ang_velocity": 0.2,
-            "delta_torque": 0.025,
+            "ang_velocity": 0.05,
+            "delta_torque": 1.0,
             "proximity": 0.1
         }
     },
     "supervised": {
-        "n_iterations": 5001,
-        "lr_half_life": 500,
-        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_disc/",
+        "n_iterations": 150001,
+        "lr_half_life": 15000,
+        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_box/",
         "learning_rate": 0.01,
-        "dataset_path": "/home/ramos/phiflow/storage/dataset_disc/",
+        "dataset_path": "/home/ramos/phiflow/storage/dataset_box_local_bigger/",
         "dataset_n_steps": 500,
-        "model_export_stride": 500,
+        "model_export_stride": 15000,
         "n_simulations": 100,
         "optimizer": "AdamW",
-        "local_coordinates": false,
+        "local_coordinates": true,
         "destinations_margins": [
             20,
             20
@@ -64,15 +67,15 @@
             0.0
         ],
         "dataloader_params": {
-            "batch_size": 30,
+            "batch_size": 15,
             "shuffle": true,
             "num_workers": 7
         }
     },
     "simulation": {
-        "path": "/home/ramos/phiflow/storage/baseline_box_two_obstacles2/",
+        "path": "/home/ramos/phiflow/storage/dummy/",
         "n_steps": 7501,
-        "re": 5000,
+        "re": 3000,
         "tripping_on": false,
         "obs_density": 0.3,
         "reference_velocity": 3,
@@ -82,15 +85,7 @@
         "obs_width": 20,
         "obs_height": 6,
         "time_step_scheme": "RK2",
-        "second_obstacle": {
-            "xy": [
-                35,
-                50
-            ],
-            "ang_vel": 0.2,
-            "width": 5,
-            "height": 30
-        },
+        "obs_angle": 30,
         "domain_size": [
             175,
             110
@@ -109,13 +104,15 @@
     },
     "controller": {
         "ls_coeffs": [
-            "/home/ramos/phiflow/neural_control/controller_design/ls_coeffs_disc.json"
+            "/home/ramos/phiflow/neural_control/linear_controllers/ls_coeffs_disc.json"
         ],
         "pid_coeffs": [
-            "/home/ramos/phiflow/neural_control/controller_design/gains_pid_disc.json"
+            "/home/ramos/phiflow/neural_control/linear_controllers/gains_pid_box_xy.json",
+            "/home/ramos/phiflow/neural_control/linear_controllers/gains_pid_box_angle.json"
         ],
         "clamp_values": [
-            20
+            20,
+            0.5
         ]
     },
     "export_vars": [
@@ -141,6 +138,11 @@
         "loss_ang_vel",
         "vorticity",
         "cfl",
-        "fluid_torque"
+        "fluid_torque",
+        "control_torque",
+        "obs_ang",
+        "obs_ang_vel",
+        "reference_ang",
+        "error_ang"
     ]
 }

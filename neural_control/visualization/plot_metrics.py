@@ -86,6 +86,7 @@ for fig_name, attrs in loop_dict.items():
             for params in attrs['metrics']:
                 metric_name = params['name']
                 value = np.squeeze(metrics[metric_name])
+                if value.ndim > 1: value = value[params.get('case', 0)]
                 label = f"{run_label}_{model_id}_/{metric_name}"
                 if len(value.shape) == 1:
                     x = np.arange(value.shape[0]) * x_scale_factor[test.split("_")[0]]

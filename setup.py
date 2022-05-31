@@ -160,7 +160,7 @@ setup(
     author_email='philipp.holl@tum.de',
     url='https://github.com/tum-pbs/PhiFlow',
     include_package_data=True,
-    install_requires=['scipy', 'dash', 'plotly', 'imageio', 'matplotlib', 'natsort', 'seaborn', 'PyQt5', 'tensorboard'],
+    install_requires=['scipy', 'dash', 'plotly', 'imageio', 'matplotlib', 'natsort', 'seaborn', 'PyQt5', 'tensorboard==2.7.0', 'protobuf==3.20.0'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',

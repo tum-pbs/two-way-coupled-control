@@ -2,6 +2,10 @@
 
 This is a modified version of the differentiable solver  [Φ<sub>Flow</sub>](https://github.com/tum-pbs/PhiFlow) designed to investigate how differentiable solvers can be used to train neural networks to act as controllers in an unsupervised way for a fluid system with two-way coupling.
 
+
+[![Demo CountPages alpha]](inbuoy_diff.gif)
+
+
 <!-- TODO Add a brief theoretical explanation -->
 # Installation
 It is recommended to use a virtual environment such as [conda](https://docs.conda.io/en/latest/ ) in order to properly install the required packages.
@@ -43,6 +47,19 @@ Training neural networks as controllers using the differentiable simulator is ac
 python neural_control/neural_networks/train_unsupervised.py path/to/storage/folder/
 ```
 
+The network is trained by minimizing the following loss function
+
+$$L = O + V + E$$
+
+$$O = \frac{\beta_{xy}}{l}\sum_{n=0}^{l-1}\|e_{xy}^n\|^2 + \frac{\beta_{\alpha}}{l}\sum_{n=0}^{l-1} \|e_{\alpha}^n\|^2$$
+
+$$V = \frac{\beta_{\dot{x}}}{l}\sum_{n=0}^{l-1}\frac{\|\dot{x}^n\|^2}{\beta_{prox}\|e_{xy}^n\|^2 + 1} + \frac{\beta_{\dot{\alpha}}}{l}\sum_{n=0}^{l-1}\frac{\|\dot{\alpha}^n\|^2}{\beta_{prox}\|e_{\alpha}^n\|^2 + 1}$$
+
+$$ E = \frac{\beta_F}{l}\sum_{n=0}^{l-1} \|F_c^n\|^2
+    + \frac{\beta_T}{l}\sum_{n=0}^{l-1} \|T_c^n\|^2 +
+      \frac{\beta_{\Delta F}}{l}\sum_{n=0}^{l-1} \|F_c^n-F_c^{n-1}\|^2
+    + \frac{\beta_{\Delta T}}{l}\sum_{n=0}^{l-1} \|T_c^n-T_c^{n-1}\|^2 $$
+
 Intermediate models are saved during training before all iterations are performed as *trained_model_####.pt*, where #### is a model index.
 
 All parameters for training are set in *inputs.json*, especially in the "unsupervised" session.
@@ -81,7 +98,7 @@ python neural_control/misc/calculate_metrics.py /path/to/model/folder/
 This will calculate all metrics and export them to */path/to/model/folder/tests/test#_#/metrics.json*.
 
 # Visualization
-Simulations can be quickly visualized with an interactive data visualizer GUI by
+Simulations can be quickly visualized with an interactive data visualizer GUI with
 ```
 python neural_control/visualization/data_visualizer.py
 ```
