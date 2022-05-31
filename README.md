@@ -3,10 +3,6 @@
 This is a modified version of the differentiable solver  [Φ<sub>Flow</sub>](https://github.com/tum-pbs/PhiFlow) designed to investigate how differentiable solvers can be used to train neural networks to act as controllers in an unsupervised way for a fluid system with two-way coupling.
 
 
-[![Demo CountPages alpha]](inbuoy_diff.gif)
-
-
-<!-- TODO Add a brief theoretical explanation -->
 # Installation
 It is recommended to use a virtual environment such as [conda](https://docs.conda.io/en/latest/ ) in order to properly install the required packages.
 ```
@@ -59,6 +55,7 @@ $$ E = \frac{\beta_F}{l}\sum_{n=0}^{l-1} \|F_c^n\|^2
     + \frac{\beta_T}{l}\sum_{n=0}^{l-1} \|T_c^n\|^2 +
       \frac{\beta_{\Delta F}}{l}\sum_{n=0}^{l-1} \|F_c^n-F_c^{n-1}\|^2
     + \frac{\beta_{\Delta T}}{l}\sum_{n=0}^{l-1} \|T_c^n-T_c^{n-1}\|^2 $$
+where $e$ represent errors, $\dot{x}$ and $\dot{\alpha}$ velocities and $F_c$ and $T_c$ control efforts. $\beta$ are hyperparameters that weight the contribution of each term.
 
 Intermediate models are saved during training before all iterations are performed as *trained_model_####.pt*, where #### is a model index.
 
