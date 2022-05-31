@@ -20,7 +20,7 @@
         "control_torque"
     ],
     "unsupervised": {
-        "simulation_path": "/home/brener/phiflow/storage/baseline_box/",
+        "simulation_path": "/home/ramos/phiflow/storage/ics/training_3dof/",
         "destinations_zone_growrate": 0.33,
         "n_timesteps": 1000,
         "simulation_dropout": 1.0,
@@ -897,7 +897,7 @@
     "n_past_features": 9,
     "n_present_features": 6,
     "simulation": {
-        "path": "/home/ramos/phiflow/storage/baseline_box/",
+        "path": "/home/ramos/phiflow/storage/ics/training_3dof/",
         "n_steps": 101,
         "re": 1000,
         "tripping_on": false,
@@ -930,7 +930,6 @@
         "obs_mass": 36.0,
         "obs_inertia": 4000
     },
-    "export_path": "./storage//rotation/online_20_seed100///",
     "ref_vars": {
         "velocity": 1,
         "length": 5,

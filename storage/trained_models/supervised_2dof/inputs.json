@@ -19,7 +19,7 @@
     "supervised": {
         "n_iterations": 150001,
         "lr_half_life": 15000,
-        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_disc/",
+        "initial_conditions_path": "/home/ramos/phiflow/storage/ics/training_2dof/",
         "learning_rate": 0.01,
         "dataset_path": "/home/ramos/phiflow/storage/dataset_disc/",
         "dataset_n_steps": 500,

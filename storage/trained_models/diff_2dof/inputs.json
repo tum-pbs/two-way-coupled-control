@@ -17,7 +17,7 @@
         "control_force_y"
     ],
     "unsupervised": {
-        "simulation_path": "/home/brener/phiflow/storage/baseline_disc/",
+        "simulation_path": "/home/brener/phiflow/storage/ics/training_2dof/",
         "destinations_zone_growrate": 0.33,
         "n_timesteps": 1000,
         "simulation_dropout": 1.0,
@@ -246,7 +246,7 @@
     "n_past_features": 6,
     "n_present_features": 4,
     "simulation": {
-        "path": "/home/ramos/phiflow/storage/baseline_simple_noinflow2/",
+        "path": "/home/brener/phiflow/storage/ics/training_2dof/",
         "n_steps": 101,
         "re": 1000,
         "tripping_on": false,
@@ -279,7 +279,6 @@
         "obs_mass": 11.780972450961725,
         "obs_inertia": 49.087385212340514
     },
-    "export_path": "./storage/storage/translation/online_20//",
     "ref_vars": {
         "velocity": 1,
         "length": 5,
