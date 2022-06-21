@@ -18,11 +18,12 @@ conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
 Navigate to the folder you would like to use to store the code and clone this repository.
 ```
 git clone https://github.com/brenerrr/PhiFlow.git ./
+git checkout two_way_coupling
 ```
 
 Lastly install all packages.
 ```
-cd PhiFlow; pip install . ./
+pip install . ./
 ```
 
 Next verify that Φ<sub>Flow</sub> is correctly installed and can access PyTorch.
@@ -135,5 +136,10 @@ python neural_control/visualization/plot_fields.py 8 3900 --folders diff
 python neural_control/visualization/plot_fields.py 9 5900 --folders diff
 ``` -->
 
+# Reinforcement Learning
 
+Networks trained via reinforcement learning algorithms were also considered in this work. The code used for that is derived from this branch and can be found [here](https://github.com/Sh0cktr4p/PhiFlow/tree/two_way_coupling). It utilizes the [stable-baselines3](https://github.com/DLR-RM/stable-baselines3) framework for training and the two-way-coupling simulations as the environment.
 
+A fully trained model can be found in *storage/trained_models/rl_2dof/*.
+
+<!-- # Supervised Learning -->
