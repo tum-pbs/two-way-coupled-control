@@ -2,6 +2,11 @@
 
 This is a modified version of the differentiable solver  [Φ<sub>Flow</sub>](https://github.com/tum-pbs/PhiFlow) designed to investigate how differentiable solvers can be used to train neural networks to act as controllers in an unsupervised way for a fluid system with two-way coupling.
 
+<br>
+<p align="center">
+<img src="https://raw.githubusercontent.com/brenerrr/PhiFlow/two_way_coupling/test6.gif"/>
+</p>
+<br>
 
 # Installation
 It is recommended to use a virtual environment such as [conda](https://docs.conda.io/en/latest/ ) in order to properly install the required packages.
@@ -10,7 +15,7 @@ conda create --name phiflow python=3.7
 conda activate phiflow
 ```
 
-The specific implementations for two-way coupling used the PyTorch framework, which can be installed with
+The specific implementations for two-way coupling use the PyTorch framework, which can be installed with
 ```
 conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
 ```
@@ -33,15 +38,16 @@ python tests/verify.py
 
 Inputs required to run most scripts are grouped in the file *neural_control/inputs.json*.
 # Generate Initial Conditions
-Simulations used as initial conditions are performed by executing
+Simulations used as initial conditions are created by executing
 ```
 python neural_control/misc/generate_ic.py
 ```
-Inputs necessary for generating initial conditions for training and test environments can be found in the "simulation" section of *inputs.json*. All initial conditions used in our paper can be found on *storage/ics/*.
+Inputs necessary for generating initial conditions for training and test environments can be found in the "simulation" section of *neural_control/inputs.json*. All initial conditions used in our paper can be found on *storage/ics/*.
 # Training
-Training neural networks as controllers using the differentiable simulator is achieved by executing
+
+Training neural networks as controllers using the differentiable simulator is done by executing
 ```
-python neural_control/neural_networks/train_unsupervised.py path/to/storage/folder/
+python neural_control/neural_networks/train_unsupervised.py path/to/export/folder/
 ```
 
 The network is trained by minimizing the following loss function
@@ -69,6 +75,13 @@ Intermediate models are saved during training before all iterations are performe
 
 All parameters for training are set in *inputs.json*, especially in the "unsupervised" session.
 
+<br>
+<p align="center">
+<img src="https://raw.githubusercontent.com/brenerrr/PhiFlow/two_way_coupling/training_box.gif" width="200" height="200"/>
+<figcaption align = "center"><b>Neural network learning to control the rigid body in order to reach a target location and orientation.</b></figcaption>
+</p>
+<br>
+
 # Tests
 Before running the tests, it is necessary to generate the *tests.json* that contains all tests parameters by running
 
@@ -76,7 +89,7 @@ Before running the tests, it is necessary to generate the *tests.json* that cont
 python neural_control/testing/generate_tests.py
 ```
 
-After that, a test simulations can be performed by executing
+After that, test simulations can be performed by executing
 
 ```
 python neural_control/testing/test_networks.py path/to/model/folder/ model_index tests_id
@@ -93,6 +106,14 @@ The table below summerizes all tests available with their respective IDs.
 | Inflow |    4    |   3   | 3000  |       5       |   ✔    |          |         |
 | InBuoy |    5    |   3   | 3000  |       5       |   ✔    |    ✔     |         |
 | Hold   |    6    |   3   | 3000  |       5       |   ✔    |    ✔     |    ✔    |
+
+<br>
+<p align="center">
+<img src="tests_3dof.png" width="300"/>
+<figcaption align = "center"><b>Schematic of tests environments.</b></figcaption>
+</p>
+<br>
+
 
 After running the desired tests, calculate the metrics with
 ```
@@ -116,7 +137,7 @@ When loading the GUI for the first time, after inserting the path to the directo
 
 The folder structure of the example above is set the following way
 ```
-root path
+storage
 │
 └───diff_2dof
     │   inputs.json
@@ -134,14 +155,33 @@ root path
 
 
 If "Test Data" is not ticked, the GUI will try to plot the "data" folder directly at the model folder (training data) instead of the one of the chosen test.
-<!-- ## Fields
-TODO Fields export used in the paper
+## Fields
+
+Contour plots can be generated for a specific snapshot from a test with
+
 ``` bash
-python neural_control/visualization/plot_fields.py 10 3900 --folders diff
-python neural_control/visualization/plot_fields.py 7 5900 --folders diff
-python neural_control/visualization/plot_fields.py 8 3900 --folders diff
-python neural_control/visualization/plot_fields.py 9 5900 --folders diff
-``` -->
+python neural_control/visualization/plot_fields.py path/to/storage/ test_id snapshot --folders model_folder
+```
+
+For example, the command below generates the vorticity contour of all simulations from test 5 at timestep 3900 located in the folder diff_3dof.
+```
+python neural_control/visualization/plot_fields.py path/to/storage/ 5 3900 --folders diff_3dof
+```
+# Supervised Learning
+A dataset must be first created in order to train a controller in a supervised way by running
+
+```
+python neural_control/neural_networks/generate_dataset.py
+```
+
+Make sure that *initial_conditions_path* from the *supervised* section of inputs.json has the correct path to the initial conditions folder. Also, the dataset will be stored in the folder *dataset_path* from the *supervised* section.
+
+After the dataset is generated, a model can be trained with
+```
+python neural_control/neural_networks/train_supervised.py path/to/storage/folder/
+```
+
+The training losses are logged in *path/to/storage/folder/* folder and can be visualized with TensorBoard.
 
 # Reinforcement Learning
 
@@ -149,4 +189,5 @@ Networks trained via reinforcement learning algorithms were also considered in t
 
 A fully trained model can be found in *storage/trained_models/rl_2dof/*.
 
-<!-- # Supervised Learning -->
+# Publications
+- [Control of Two-way Coupled Fluid Systems with Differentiable Solvers](https://arxiv.org/abs/2206.00342), *Brener Ramos, Felix Trost, Nils Thuerey*, arXiv 2022.

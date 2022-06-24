@@ -15,39 +15,46 @@ plt.rcParams.update({'font.size': 20})
 width = 2
 height = 1.8
 plot_elements = [
-    # 'forces',
+    'forces',
     'objective',
     'trajectory',
-    # 'torques'
+    'torques'
 ]
 field_name = {
     1: 'vorticity',
     2: 'smoke',
     3: 'vorticity',
-    4: 'smoke',
+    4: 'vorticity',
     5: 'vorticity',
+    # 5: 'smoke',
     6: 'vorticity',
-    7: 'vorticity',
-    8: 'smoke',
-    9: 'vorticity',
-    10: 'smoke'
 }
 cmap = {
     1: 'bwr',
-    10: 'Greens',
-    3: 'bwr',
-    7: 'bwr',
-    8: 'Greens',
-    9: 'bwr',
     2: 'Greens',
+    3: 'bwr',
+    4: 'bwr',
+    # 5: 'Greens',
+    5: 'bwr',
+    6: 'bwr',
 }
 
 
 quiver_kwargs = dict(
     # scale=100,
-    scale=20,
+    # scale=10,
+    scale=200,
     width=0.01,
     zorder=10
+)
+add_quiver_kwargs = dict(
+    # scale=100,
+    # scale=10,
+    scale=200,
+    width=0.015,
+    zorder=10,
+    linewidth=1,
+    edgecolor='w'
 )
 xy_kwargs = dict(
     linewidth=.5,
@@ -61,10 +68,12 @@ xy_current_kwargs = dict(
     marker='o',
     # marker='None',
     color='w',
+    markersize=3
 )
 torque_offset = 8
 torque_kwargs = dict(
-    scale=150,
+    # scale=150,
+    scale=400,
     facecolor='none',
     linewidth=1,
     width=0.0002,
@@ -91,55 +100,39 @@ objectives_kwargs = dict(
 obs_height = 6
 
 x_lim = {
-    # 1: [30, 65],
-    1: [35, 65],  # Test 1 snapshots
-    # 1: [10, 80],  # video
+    # 1: [35, 65],  # Snapshots
+    1: [10, 80],  # video
     2: [20, 60],
     # 2: [10, 70],  # Video
-    3: [25, 75],  # Snapshots
-    # 3: [10, 70],  # Video
-    # 3: [25, 85],  # Fig Schmeatic
+    # 3: [25, 75],  # Snapshots
+    3: [10, 70],  # Video
     4: [65, 130],
     5: [65, 135],
-    6: [65, 135],
-    # 7: [65, 130],
-    # 8: [65, 135],
-    # 9: [60, 145],  # Video
-    # 9: [65, 135],
-    7: [65, 135],  # Snapshots
-    8: [65, 135],  # Snapshots
-    9: [65, 135],  # Snapshots
-    10: [20, 60],
+    6: [90, 170],
+    # 6: [100, 160],
 }
 y_lim = {
     # 1: [30, 70],
-    1: [15, 45],  # snapshots
-    # 1: [10, 70],  # video
-    2: [20, 72],
-    # 2: [15, 80],  # Video
-    3: [25, 70],  # Snapshots
-    # 3: [15, 75],  # Video
+    # 1: [15, 45],  # snapshots
+    1: [10, 70],  # video
+    # 2: [20, 72],
+    2: [15, 80],  # Video
+    # 3: [25, 70],  # Snapshots
+    3: [15, 75],  # Video
     # 3: [30, 70],  # Schematic
-    4: [28, 75],
-    5: [28, 85],
-    6: [28, 80],
-    # 9: [28, 95],  # Videos
-    # 7: [28, 75],
-    # 8: [28, 85],
-    # 9: [28, 85],
-    7: [25, 85],  # Snapshots
-    8: [25, 85],  # Snapshots
-    9: [28, 85],  # Snapshots
-    10: [20, 72],
+    4: [25, 85],  # Snapshots
+    5: [25, 85],  # Snapshots
+    # 6: [40, 75],
+    6: [30, 85],
 }
 v = {
-    10: [0, 1.5],
-    7: [-2, 2],
-    8: [0, 1.5],
-    9: [-3, 3],
     1: [-1, 1],
-    3: [-1, 1],
     2: [0, 1.5],
+    3: [-1, 1],
+    4: [-2, 2],
+    # 5: [0, 1.5],
+    5: [-3, 3],
+    6: [-3, 3],
 }
 # %% Inputs
 parser = argparse.ArgumentParser(description='Plot fields')
@@ -176,6 +169,8 @@ for folder in folders:
     # Get snapshots and cases
     files = os.listdir(f"{root}/{folder}/tests/{test_}/data/{field_name}")
     cases = natsorted(list(set([file.split("case")[1].split("_")[0] for file in files])))
+    # cases = ['0002']  # TODO
+    if snapshots[0] == -1: snapshots = natsorted(list(set([int(file.split("_")[-1].split(".")[0]) for file in files])))
     # Create export folder
     for case in cases:
         # Load trajectory
@@ -185,6 +180,14 @@ for folder in folders:
         control_fy = np.load(f"{root}/{folder}/tests/{test_}/data/control_force_y/control_force_y_case{case}.npy")
         fluid_fx = np.load(f"{root}/{folder}/tests/{test_}/data/fluid_force_x/fluid_force_x_case{case}.npy")
         fluid_fy = np.load(f"{root}/{folder}/tests/{test_}/data/fluid_force_y/fluid_force_y_case{case}.npy")
+        try:
+            add_fx = np.load(f"{root}/{folder}/tests/{test_}/data/add_forces_x/add_forces_x_case{case}.npy")
+            add_fy = np.load(f"{root}/{folder}/tests/{test_}/data/add_forces_y/add_forces_y_case{case}.npy")
+        except FileNotFoundError:
+            add_fx = fluid_fx * 0
+            add_fy = fluid_fy * 0
+            print('Did not find additional forces')
+            pass
         # Load objectives
         obj_x = np.load(f"{root}/{folder}/tests/{test_}/data/reference_x/reference_x_case{case}.npy") - 0.5  # Remove offset for visualization
         obj_y = np.load(f"{root}/{folder}/tests/{test_}/data/reference_y/reference_y_case{case}.npy") - 0.5  # Remove offset for visualization
@@ -206,6 +209,7 @@ for folder in folders:
             pass
         for i, snapshot in enumerate(snapshots):
             j = int(snapshot)
+            print(j)
             # Create object only on first time the just update data
             # Load and add obs mask
             mask = np.load(f"{root}/{folder}/tests/{test_}/data/obs_mask/obs_mask_case{case}_{snapshot:05d}.npy").transpose() * 0.5
@@ -221,11 +225,12 @@ for folder in folders:
                 ax.set_xticklabels([])
                 ax.set_yticklabels([])
                 # Make room for colorbar
+                fig.subplots_adjust(right=0.72)  # Test 2
                 # fig.subplots_adjust(right=0.8)
                 # Add color bar
-                # cax = fig.add_axes([ax.get_position().x1 + 0.04, ax.get_position().y0, 0.02, ax.get_position().y1 - ax.get_position().y0])
-                # cbar = fig.colorbar(field_image, cax=cax, ticks=[imshow_kwargs['vmin'], 0, imshow_kwargs['vmax']])
-                # cbar.ax.set_yticklabels([imshow_kwargs['vmin'], cbar_labels[field_name], imshow_kwargs['vmax']])
+                cax = fig.add_axes([ax.get_position().x1 + 0.02, ax.get_position().y0, 0.04, ax.get_position().y1 - ax.get_position().y0])
+                cbar = fig.colorbar(field_image, cax=cax, ticks=[imshow_kwargs['vmin'], imshow_kwargs['vmax']])
+                cbar.ax.set_yticklabels([imshow_kwargs['vmin'], imshow_kwargs['vmax']])
                 # Now add transparency and mask
                 field_image.set_alpha(1 - mask)
                 mask_image, *_ = p.imshow(['mask'], 'fig', cmap='Greys', alpha=mask, create_title=False, create_cbar=False, origin='lower')
@@ -251,7 +256,8 @@ for folder in folders:
                 if 'forces' in plot_elements:
                     # Create force arrows
                     control_quiver = ax.quiver(xy[0][j], xy[1][j], control_fx[j], control_fy[j], color="tab:orange", **quiver_kwargs)
-                    fluid_quiver = ax.quiver(xy[0][j], xy[1][j], fluid_fx[j], fluid_fy[j], color="tab:olive", **quiver_kwargs)
+                    fluid_quiver = ax.quiver(xy[0][j], xy[1][j], fluid_fx[j], fluid_fy[j], color="tab:olive", alpha=0.5, **quiver_kwargs)
+                    add_quiver = ax.quiver(xy[0][j], xy[1][j], add_fx[j], add_fy[j], color="k", **add_quiver_kwargs)
                 if 'torques' in plot_elements:
                     # Create _torques
                     anchor_x = np.array([np.cos(-angle[j]) * torque_offset, -np.cos(-angle[j]) * torque_offset])
@@ -263,7 +269,7 @@ for folder in folders:
                     control_torque_quiver = ax.quiver(anchor_x, anchor_y, data_u, data_v, edgecolor="tab:orange", **torque_kwargs)
                     data_v = [np.cos(angle[j]) * fluid_torque[j], -np.cos(angle[j]) * fluid_torque[j]]
                     data_u = [np.sin(angle[j]) * fluid_torque[j], -np.sin(angle[j]) * fluid_torque[j]]
-                    fluid_torque_quiver = ax.quiver(anchor_x, anchor_y, data_u, data_v, edgecolor="tab:olive", **torque_kwargs)
+                    fluid_torque_quiver = ax.quiver(anchor_x, anchor_y, data_u, data_v, edgecolor="tab:olive", alpha=0.5, **torque_kwargs)
             else:
                 # Mask
                 mask_image.set_data(mask)
@@ -281,6 +287,8 @@ for folder in folders:
                     control_quiver.set_offsets([xy[0][j], xy[1][j]])
                     fluid_quiver.set_UVC(fluid_fx[j], fluid_fy[j])
                     fluid_quiver.set_offsets([xy[0][j], xy[1][j]])
+                    add_quiver.set_UVC(add_fx[j], add_fy[j])
+                    add_quiver.set_offsets([xy[0][j], xy[1][j]])
                 if 'torques' in plot_elements:
                     # Quivers torque
                     anchor_x = np.array([np.cos(-angle[j]) * torque_offset, -np.cos(-angle[j]) * torque_offset])
