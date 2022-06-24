@@ -109,7 +109,7 @@ The table below summerizes all tests available with their respective IDs.
 
 <br>
 <p align="center">
-<img src="tests_3dof.png" width="300"/>
+<img src="https://raw.githubusercontent.com/brenerrr/PhiFlow/two_way_coupling/tests_3dof.png" width="300"/>
 <figcaption align = "center"><b>Schematic of tests environments.</b></figcaption>
 </p>
 <br>
