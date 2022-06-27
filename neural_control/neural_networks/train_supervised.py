@@ -36,7 +36,14 @@ if __name__ == '__main__':
     shutil.rmtree(export_path + '/tensorboard/', ignore_errors=True)
 
     label_vars = [var for var in inp.nn_vars if 'control' in var]
-    dataset = Dataset(inp.supervised['dataset_path'], inp.supervised['tvt_ratio'], inp.nn_vars, label_vars, local=inp.supervised['local_coordinates'])
+    dataset = Dataset(
+        inp.supervised['dataset_path'],
+        inp.supervised['tvt_ratio'],
+        inp.nn_vars,
+        label_vars,
+        local=inp.supervised['local_coordinates'],
+        past_window=inp.past_window
+    )
     local_str = '_local' if inp.supervised['local_coordinates'] else ''
     dataset.ref_vars["velocity"] = 2 * (dataset.stdd['obs_vx' + local_str] + dataset.stdd['obs_vy' + local_str]) / 2
     dataset.ref_vars["length"] = 2 * (dataset.stdd['error_x' + local_str] + dataset.stdd['error_y' + local_str]) / 2
@@ -58,7 +65,6 @@ if __name__ == '__main__':
         inp.past_window).to(device)
     total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"\n Total amount of trainable parameters: {total_params}")
-    dataset.set_past_window_size(inp.past_window)
     dataloader = torch.utils.data.DataLoader(dataset, **inp.supervised['dataloader_params'])
     learning_rate = inp.supervised['learning_rate']
     optimizer_func = getattr(torch.optim, inp.supervised['optimizer'])

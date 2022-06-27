@@ -8,7 +8,7 @@ import numpy as np
 class Dataset(torch.utils.data.Dataset):
     'Characterizes a dataset for PyTorch'
 
-    def __init__(self, path: str, tvt_ratio: tuple, vars: list, label_vars: list, ref_vars=None, local: bool = True):
+    def __init__(self, path: str, tvt_ratio: tuple, vars: list, label_vars: list, ref_vars=None, past_window: int = 2, local: bool = True):
         """
         Initialize ids and labels
 
@@ -24,16 +24,11 @@ class Dataset(torch.utils.data.Dataset):
         assert (np.sum(tvt_ratio) - 1.0) ** 2 < 1e-8
         self.mode = 'training'
         self.path = path + '/data/'
-        self.past_window = 0
+        self.past_window = past_window
         self.tvt_ratio = tvt_ratio
         self.vars = vars
         self.label_vars = label_vars  # Variables that will be used as labels
-        # Load data mean and stdd if file exists
-        if os.path.isfile(path + '/mean_stdd.json'):
-            with open(path + '/mean_stdd.json', 'r') as file:
-                data = json.load(file)
-            self.mean = data['mean']
-            self.stdd = data['stdd']
+
         self.ref_vars = ref_vars if ref_vars else defaultdict(lambda: 1)
         self.ref_vars_hash = dict(
             probes_vx='velocity',
@@ -50,7 +45,7 @@ class Dataset(torch.utils.data.Dataset):
             control_torque='torque',
             error_ang='angle'
         )
-        # Append local to variables names
+       # Append local to variables names
         if local:
             self.vars_ = []
             # vars_
@@ -73,6 +68,13 @@ class Dataset(torch.utils.data.Dataset):
             self.label_vars_ = self.label_vars
         self.map_cases()
         self.update()
+        # Load data mean and stdd if file exists
+        if not os.path.isfile(path + '/mean_stdd.json'):
+            self.compute_mean_stdd()
+        with open(path + '/mean_stdd.json', 'r') as file:
+            data = json.load(file)
+        self.mean = data['mean']
+        self.stdd = data['stdd']
 
         # # Make sure hash values are on ref_vars keys
         # hash_values = self.ref_vars_hash.values()

@@ -49,9 +49,9 @@
     "supervised": {
         "n_iterations": 150001,
         "lr_half_life": 15000,
-        "initial_conditions_path": "/home/ramos/phiflow/storage/baseline_box/",
+        "initial_conditions_path": "/home/ramos/phiflow/storage/ics/training_3dof/",
         "learning_rate": 0.01,
-        "dataset_path": "/home/ramos/phiflow/storage/dataset_box_local_bigger/",
+        "dataset_path": "/home/ramos/phiflow/storage/dataset_box/",
         "dataset_n_steps": 500,
         "model_export_stride": 15000,
         "n_simulations": 100,
@@ -73,7 +73,7 @@
         }
     },
     "simulation": {
-        "path": "/home/ramos/phiflow/storage/dummy/",
+        "path": "/home/ramos/phiflow/storage/simulation/",
         "n_steps": 7501,
         "re": 3000,
         "tripping_on": false,
@@ -85,7 +85,7 @@
         "obs_width": 20,
         "obs_height": 6,
         "time_step_scheme": "RK2",
-        "obs_angle": 30,
+        "obs_angle": 0,
         "domain_size": [
             175,
             110
