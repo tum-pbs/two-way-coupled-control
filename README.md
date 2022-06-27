@@ -167,6 +167,9 @@ For example, the command below generates the vorticity contour of all simulation
 ```
 python neural_control/visualization/plot_fields.py path/to/storage/ 5 3900 --folders diff_3dof
 ```
+
+All figures are saved on path/to/storage/figs.
+
 # Supervised Learning
 A dataset must be first created in order to train a controller in a supervised way by running
 
