@@ -11,7 +11,7 @@ import matplotlib
 
 class Plotter():
 
-    def __init__(self, figsize: tuple = (7, 7), imshow_kwargs: dict = {}, plot_kwargs: dict = {}, arrows_kwargs: dict = {}, scatter_kwargs: dict = {}):
+    def __init__(self, figsize: tuple = (7, 7), imshow_kwargs: dict = {}, plot_kwargs: dict = {}, arrows_kwargs: dict = {}, scatter_kwargs: dict = {}, backend: str = 'qt5agg'):
         """
         Initialize parameters
 
@@ -34,7 +34,7 @@ class Plotter():
         self.figsize = figsize
         plt.rc('axes', prop_cycle=(cycler('color', [u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf'])))
         self.colors = cycle([u'#1f77b4', u'#ff7f0e', u'#2ca02c', u'#d62728', u'#9467bd', u'#8c564b', u'#e377c2', u'#7f7f7f', u'#bcbd22', u'#17becf'])
-        use('qt5agg')
+        use(backend)
         # Make plot iteractive
         # plt.ion()
 

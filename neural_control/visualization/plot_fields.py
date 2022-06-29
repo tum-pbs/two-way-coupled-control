@@ -144,11 +144,15 @@ parser.add_argument("test", help="Test ID", type=int)
 parser.add_argument("snapshots", nargs='+', help="Snapshots to be plotted", type=int)
 # Models folders
 parser.add_argument("--folders", "-f", nargs='+', help="Models folders")
+# Matplotlib backend
+parser.add_argument("--backend", help="Matplotlib backend", default="qt5agg")
+
 args = parser.parse_args()
 root = args.root
 folders = args.folders
 snapshots = args.snapshots
 test = args.test
+backend = args.backend
 
 # %% Final plotting paramters
 field_name = field_name[test]
@@ -216,7 +220,7 @@ for folder in folders:
             # Load and add field
             field = np.load(f"{root}/{folder}/tests/{test_}/data/{field_name}/{field_name}_case{case}_{snapshot:05d}.npy").transpose()
             if i == 0:
-                p = Plotter((width, height))
+                p = Plotter((width, height), backend=backend)
                 p.add_data([mask, field], ['mask', 'field'])
                 # Plot imshow
                 field_image, ax, fig, _ = p.imshow(['field'], 'fig', create_cbar=False, create_title=False, origin='lower', **imshow_kwargs)
