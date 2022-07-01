@@ -8,7 +8,7 @@ import argparse
 
 # %% Plot parameters
 
-plt.rcParams['text.usetex'] = True
+# plt.rcParams['text.usetex'] = True
 plt.rcParams['font.family'] = 'Times New Roman'
 plt.rcParams.update({'font.size': 20})
 # width = 4
