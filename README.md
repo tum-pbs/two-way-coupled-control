@@ -77,8 +77,9 @@ All parameters for training are set in *inputs.json*, especially in the "unsuper
 
 <br>
 <p align="center">
-<img src="https://raw.githubusercontent.com/brenerrr/PhiFlow/two_way_coupling/training_box.gif" width="200" height="200"/>
-<figcaption align = "center"><b>Neural network learning to control the rigid body in order to reach a target location and orientation.</b></figcaption>
+<img src="https://github.com/brenerrr/PhiFlow/blob/two_way_coupling/schematic.png?raw=true" height=250/>
+<img src="https://raw.githubusercontent.com/brenerrr/PhiFlow/two_way_coupling/training_box.gif" width="250" height="250"/>
+<figcaption align = "center"><b>A schematic of the differentiable solver training: Blue arrows represent the forward pass while red ones illustrate the flow of gradients. Importantly, the loss signal is backpropagated through l simulation steps to provide policy P with long-term feedback about the flow environment.</b></figcaption>
 </p>
 <br>
 
