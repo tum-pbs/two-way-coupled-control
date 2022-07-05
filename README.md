@@ -124,6 +124,8 @@ python neural_control/misc/calculate_metrics.py /path/to/model/folder/
 
 This will calculate all metrics and export them to */path/to/model/folder/tests/test#_#/metrics.json*.
 
+A google colab notebook showing the overall workflow can be accessed [here]( https://colab.research.google.com/drive/1wEK3OccHzsnBHJAzVIszQJ8cNoGOG0lM#scrollTo=_qE5k7Ags1sj).
+
 # Visualization
 Simulations can be quickly visualized with an interactive data visualizer GUI with
 ```
