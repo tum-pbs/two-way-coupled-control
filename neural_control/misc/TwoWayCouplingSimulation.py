@@ -37,7 +37,7 @@ class TwoWayCouplingSimulation:
         self.translation_only = translation_only
         self.time_step_scheme = time_step_scheme
         self.additional_obs = []
-        if device == "GPU":
+        if device == "GPU" and torch.cuda.is_available():
             TORCH_BACKEND.set_default_device("GPU")
             self.device = torch.device("cuda:0")
         else:
