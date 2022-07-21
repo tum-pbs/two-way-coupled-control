@@ -84,7 +84,7 @@ if __name__ == "__main__":
                 inp.n_present_features,
                 inp.n_past_features,
                 inp.past_window).to(device)
-        model.load_state_dict(torch.load(os.path.abspath(model_path)))
+        model.load_state_dict(torch.load(os.path.abspath(model_path), map_location=device))
         print("Model's state_dict:")  # Print model's attributes
         for param_tensor in model.state_dict():
             print(param_tensor, "\t", model.state_dict()[param_tensor].size())
