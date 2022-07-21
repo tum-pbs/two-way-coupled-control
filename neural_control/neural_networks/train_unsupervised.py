@@ -15,7 +15,7 @@ if __name__ == "__main__":
     inp = InputsManager(os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../inputs.json"), ['unsupervised'])
     inp.calculate_properties()
     inp.add_values(os.path.abspath(inp.unsupervised['simulation_path'] + 'inputs.json'), ["simulation"])  # Load simulation inputs
-    if inp.device == "GPU":
+    if inp.device == "GPU" and torch.cuda.is_available():
         TORCH_BACKEND.set_default_device("GPU")
         device = torch.device("cuda:0")
     else:

@@ -27,7 +27,7 @@ if __name__ == "__main__":
     elif "rl" in inp.__dict__.keys(): model_type = "rl"
     else: raise ValueError("Unknown model type")
     # Set device
-    if inp.device == "GPU":
+    if inp.device == "GPU" and torch.cuda.is_available():
         TORCH_BACKEND.set_default_device("GPU")
         device = torch.device("cuda:0")
     else:
