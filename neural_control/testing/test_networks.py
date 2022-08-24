@@ -195,7 +195,8 @@ if __name__ == "__main__":
                     else:
                         export_vars = inp.export_vars
                         # Print remaining time
-                        i_remaining = (len([key for key in test.keys() if 'case' in key]) - test_i - 1) * test_attrs['n_steps'] + (test_attrs['n_steps'] - i - 1)
+                        tests_remaining = len([key for key in test.keys() if 'case' in key]) - test_i - 1
+                        i_remaining = tests_remaining * test_attrs['n_steps'] * (1 - flag_onesim) + (test_attrs['n_steps'] - i - 1)
                         remaining = i_remaining * delta
                         remaining_h = np.floor(remaining / 60. / 60.)
                         remaining_m = np.floor(remaining / 60. - remaining_h * 60.)
