@@ -15,9 +15,12 @@ if __name__ == "__main__":
     parser.add_argument("runpaths", help="Path to folder containing model data")
     parser.add_argument("model_index", help="Index of model that will be used for tests")
     parser.add_argument("tests_id", nargs="+", help="ID of tests to be performed")
+    parser.add_argument("-onesimulation", action="store_true", help="Use this flag to run only one test simulation")
     args = parser.parse_args()
     model_id = int(args.model_index)
     run_path = args.runpaths
+    flag_onesim = args.onesimulation
+    if flag_onesim: print("\n Running only one simulation \n")
     tests_id = [f"test{i}" for i in args.tests_id]
     # Load inputs
     inp = InputsManager(os.path.abspath(run_path + "/inputs.json"))
@@ -199,4 +202,5 @@ if __name__ == "__main__":
                         print(f"Time left: {remaining_h:.0f}h and {remaining_m:.0f} min - i: {i}")
                     sim.export_data(export_path, test_i, i, export_vars + ['add_forces_x', 'add_forces_y'], is_first_export)
                     is_first_export = False
+                if flag_onesim: break
     print("Done")
