@@ -190,7 +190,7 @@ class TwoWayCouplingSimulation:
         try:
             self.add_box(self.ic["obs2_xy"], self.ic["obs_h"], self.ic["obs_w"], self.ic["obs2_ang_vel"])
         except:
-            print("\n Only one obstacle in simulation")
+            # print("\n Only one obstacle in simulation")
             pass
         # Constant velocity
         self.inflow_velocity_mask = HardGeometryMask(Box[:0.5, :]) >> self.velocity
