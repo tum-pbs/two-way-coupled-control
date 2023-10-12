@@ -25,19 +25,19 @@ def compile_cuda(file_names, nvcc, source_dir, target_dir, logfile):
     import tensorflow
     tf_cflags = tensorflow.sysconfig.get_compile_flags()
     command = [
-            nvcc,
-            join(source_dir, f'{file_names}.cu.cc'),
-            '-o', join(target_dir, f'{file_names}.cu.o'),
-            '-std=c++11',
-            '-c',
-            '-D GOOGLE_CUDA=1',
-            '-x', 'cu',
-            '-Xcompiler',
-            '-fPIC',
-            '--expt-relaxed-constexpr',
-            '-DNDEBUG',
-            '-O3'
-        ] + tf_cflags
+        nvcc,
+        join(source_dir, f'{file_names}.cu.cc'),
+        '-o', join(target_dir, f'{file_names}.cu.o'),
+        '-std=c++11',
+        '-c',
+        '-D GOOGLE_CUDA=1',
+        '-x', 'cu',
+        '-Xcompiler',
+        '-fPIC',
+        '--expt-relaxed-constexpr',
+        '-DNDEBUG',
+        '-O3'
+    ] + tf_cflags
     print(f"nvcc {file_names}")
     logfile.writelines(["\n", " ".join(command), "\n"])
     subprocess.check_call(command, stdout=logfile, stderr=logfile)
@@ -49,17 +49,17 @@ def compile_gcc(file_names, gcc, source_dir, target_dir, cuda_lib, logfile):
     tf_lflags = tensorflow.sysconfig.get_link_flags()
     link_cuda_lib = '-L' + cuda_lib
     command = [
-                gcc,
-                join(source_dir, f'{file_names}.cc'),
-                join(target_dir, f'{file_names}.cu.o'),
-                '-o', join(target_dir, f'{file_names}.so'),
-                '-std=c++11',
-                '-shared',
-                '-fPIC',
-                '-lcudart',
-                '-O3',
-                link_cuda_lib
-            ] + tf_cflags + tf_lflags
+        gcc,
+        join(source_dir, f'{file_names}.cc'),
+        join(target_dir, f'{file_names}.cu.o'),
+        '-o', join(target_dir, f'{file_names}.so'),
+        '-std=c++11',
+        '-shared',
+        '-fPIC',
+        '-lcudart',
+        '-O3',
+        link_cuda_lib
+    ] + tf_cflags + tf_lflags
     print(f"gcc {file_names}")
     logfile.writelines(["\n", " ".join(command), "\n"])
     subprocess.check_call(command, stdout=logfile, stderr=logfile)
@@ -141,7 +141,13 @@ setup(
               'phi.struct',
               'phi.tf',
               'phi.torch',
-              'webglviewer'],
+              'webglviewer',
+              'neural_control',
+              'neural_control.neural_networks.rl',
+              'neural_control.misc',
+              'neural_control.neural_networks',
+              'neural_control.visualization',
+              'neural_control.linear_controllers'],
     cmdclass={
         'tf_cuda': CudaCommand,
     },
@@ -154,7 +160,7 @@ setup(
     author_email='philipp.holl@tum.de',
     url='https://github.com/tum-pbs/PhiFlow',
     include_package_data=True,
-    install_requires=['scipy', 'dash', 'plotly', 'imageio', 'matplotlib'],
+    install_requires=['scipy', 'dash', 'plotly', 'imageio', 'matplotlib', 'natsort', 'seaborn', 'PyQt5', 'tensorboard==2.7.0', 'protobuf==3.20.0'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',

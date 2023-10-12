@@ -1,0 +1,69 @@
+{
+    "export_stride": 100,
+    "probes_n_rows": 2,
+    "probes_n_columns": 3,
+    "probes_offset": 4,
+    "probes_size": 4,
+    "simulation": {
+        "path": "/home/ramos/phiflow/storage/baseline_simple_noinflow2/",
+        "n_steps": 101,
+        "re": 1000,
+        "tripping_on": false,
+        "obs_density": 0.15,
+        "reference_velocity": 1,
+        "reference_length": 5,
+        "inflow_on": false,
+        "two_obstacles": false,
+        "obs2_ang_vel": 0.0,
+        "dt": 0.1,
+        "obs_type": "disc",
+        "obs_width": 5,
+        "obs_height": 5,
+        "time_step_scheme": "RK2",
+        "domain_size": [
+            80,
+            80
+        ],
+        "obs_xy": [
+            40,
+            40
+        ],
+        "sponge_intensity": 0.01,
+        "sponge_size": [
+            5,
+            5,
+            5,
+            5
+        ],
+        "obs_mass": 11.780972450961725,
+        "obs_inertia": 49.087385212340514
+    },
+    "export_vars": [
+        "pressure",
+        "vx",
+        "vy",
+        "obs_mask",
+        "obs_xy",
+        "obs_vx",
+        "obs_vy",
+        "control_force_x",
+        "control_force_y",
+        "fluid_force_x",
+        "fluid_force_y",
+        "probes_vx",
+        "probes_vy",
+        "probes_points",
+        "reference_x",
+        "reference_y",
+        "loss",
+        "loss_velocity",
+        "loss_spatial",
+        "error_x",
+        "error_y",
+        "loss_ang",
+        "loss_ang_vel",
+        "fluid_torque",
+        "vorticity",
+        "cfl"
+    ]
+}

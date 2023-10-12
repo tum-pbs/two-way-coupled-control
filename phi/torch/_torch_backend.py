@@ -143,15 +143,15 @@ class TorchBackend(Backend):
         if ndims > 2 and pad_width[0] == pad_width[1] == (0, 0):
             reordered = value
             pad_width_reordered = pad_width[2:]
-            undo_transform = lambda x: x
+            def undo_transform(x): return x
         elif ndims > 2 and pad_width[0] == (0, 0) and self.ndims(value) < 5:
             reordered = torch.unsqueeze(value, 0)
             pad_width_reordered = pad_width[1:]
-            undo_transform = lambda x: torch.squeeze(x, 0)
+            def undo_transform(x): return torch.squeeze(x, 0)
         elif ndims < 4:
             reordered = torch.unsqueeze(torch.unsqueeze(value, 0), 0)
             pad_width_reordered = pad_width
-            undo_transform = lambda x: torch.squeeze(torch.squeeze(x, 0), 0)
+            def undo_transform(x): return torch.squeeze(torch.squeeze(x, 0), 0)
         else:
             raise NotImplementedError()  # TODO transpose to get (0, 0) to the front
         pad_width_spatial = [item for sublist in reversed(pad_width_reordered) for item in sublist]  # flatten
@@ -176,8 +176,8 @@ class TorchBackend(Backend):
         coordinates = 2 * coordinates / (resolution - 1) - 1
         coordinates = torch.flip(coordinates, dims=[-1])
         batch_size = combined_dim(coordinates.shape[0], grid.shape[0])
-        coordinates = coordinates.repeat(batch_size, *[1] * (len(coordinates.shape-1))) if coordinates.shape[0] < batch_size else coordinates
-        grid = grid.repeat(batch_size, *[1] * (len(grid.shape)-1)) if grid.shape[0] < batch_size else grid
+        coordinates = coordinates.repeat(batch_size, *[1] * (len(coordinates.shape - 1))) if coordinates.shape[0] < batch_size else coordinates
+        grid = grid.repeat(batch_size, *[1] * (len(grid.shape) - 1)) if grid.shape[0] < batch_size else grid
         result = torchf.grid_sample(grid, coordinates, mode='bilinear', padding_mode=extrapolation, align_corners=True)  # can cause segmentation violation if NaN or inf are present
         result = channels_last(result)
         return result
@@ -485,6 +485,49 @@ class TorchBackend(Backend):
         return result
 
     def conjugate_gradient(self, A, y, x0, solve_params=LinearSolve(), callback=None):
+        class CGVariant(torch.autograd.Function):
+
+            @staticmethod
+            def cg_forward(b, x0, f, params: LinearSolve):
+                tolerance_sq = self.maximum(params.relative_tolerance ** 2 * torch.sum(b ** 2, -1), params.absolute_tolerance ** 2)
+                x = x0
+                residual = d = b - f(x)
+                iterations = 0
+                delta_new = self.sum(residual**2, -1)
+                converged = True
+                while self.all(self.sum(residual ** 2, -1) > tolerance_sq):
+                    if iterations == params.max_iterations:
+                        converged = False
+                        break
+                    q = f(d)
+                    step_size = delta_new / self.sum(d * q, -1)
+                    x = x + step_size * d
+                    if (iterations % 50 == 0):
+                        residual = b - f(x)
+                    else:
+                        residual = residual - step_size * q
+                    delta_old = delta_new
+                    delta_new = self.sum(residual**2, -1)
+                    beta = delta_new / delta_old
+                    d = residual + beta * d
+                    iterations += 1
+                if torch.isnan(x).any(): converged = False
+                params.result = SolveResult(converged, iterations)
+                return x
+
+            @ staticmethod
+            def forward(ctx, y, x0, solve_params, function):
+                x = CGVariant.cg_forward(y, x0, function, solve_params)
+                ctx.solve_params_grad = solve_params.gradient_solve
+                ctx.x0 = x0
+                ctx.function = function
+                return x
+
+            @ staticmethod
+            def backward(ctx, dX):
+                grad = CGVariant.cg_forward(dX, torch.zeros_like(ctx.x0), ctx.function, ctx.solve_params_grad)
+                return grad, None, None, None
+
         if callable(A):
             function = A
         else:
@@ -502,38 +545,42 @@ class TorchBackend(Backend):
         if x0.shape[0] < batch_size:
             x0 = x0.repeat([batch_size, 1])
 
-        def cg_forward(y, x0, params: LinearSolve):
-            tolerance_sq = self.maximum(params.relative_tolerance ** 2 * torch.sum(y ** 2, -1), params.absolute_tolerance ** 2)
-            x = x0
-            dx = residual = y - function(x)
-            dy = function(dx)
-            iterations = 0
-            converged = True
-            while self.all(self.sum(residual ** 2, -1) > tolerance_sq):
-                if iterations == params.max_iterations:
-                    converged = False
-                    break
-                iterations += 1
-                dx_dy = self.sum(dx * dy, axis=-1, keepdims=True)
-                step_size = self.divide_no_nan(self.sum(dx * residual, axis=-1, keepdims=True), dx_dy)
-                x += step_size * dx
-                residual -= step_size * dy
-                dx = residual - self.divide_no_nan(self.sum(residual * dy, axis=-1, keepdims=True) * dx, dx_dy)
-                dy = function(dx)
-            params.result = SolveResult(converged, iterations)
-            return x
+        # def cg_forward(y, x0, params: LinearSolve):
+        #     tolerance_sq = self.maximum(params.relative_tolerance ** 2 * torch.sum(y ** 2, -1), params.absolute_tolerance ** 2)
+        #     x = x0
+        #     dx = residual = y - function(x)
+        #     dy = function(dx)
+        #     iterations = 0
+        #     converged = True
+        #     while self.all(self.sum(residual ** 2, -1) > tolerance_sq):
+        #         if iterations == params.max_iterations:
+        #             converged = False
+        #             break
+        #         iterations += 1
+        #         dx_dy = self.sum(dx * dy, axis=-1, keepdims=True)
+        #         step_size = self.divide_no_nan(self.sum(dx * residual, axis=-1, keepdims=True), dx_dy)
+        #         x += step_size * dx
+        #         residual -= step_size * dy
+        #         dx = residual - self.divide_no_nan(self.sum(residual * dy, axis=-1, keepdims=True) * dx, dx_dy)
+        #         dy = function(dx)
+        #     params.result = SolveResult(converged, iterations)
+        #     return x
 
-        class CGVariant(torch.autograd.Function):
+        # class CGVariant(torch.autograd.Function):
 
-            @staticmethod
-            def forward(ctx, y):
-                return cg_forward(y, x0, solve_params)
+        #     @ staticmethod
+        #     def forward(ctx, y):
+        #         return cg_forward(y, x0, solve_params)
 
-            @staticmethod
-            def backward(ctx, dX):
-                return cg_forward(dX, torch.zeros_like(x0), solve_params.gradient_solve)
+        #     @ staticmethod
+        #     def backward(ctx, dX):
+        #         return cg_forward(dX, torch.zeros_like(x0), solve_params.gradient_solve)
 
-        result = CGVariant.apply(y)
+        # a = torch.cuda.memory_allocated()
+        result = CGVariant.apply(y, x0, solve_params, function)
+        # b = torch.cuda.memory_allocated()
+        # print(f'{(b-a)}, {b} \n')
+        # return x0
         return result
 
     def functional_gradient(self, f, wrt: tuple or list, get_output: bool):

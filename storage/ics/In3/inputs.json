@@ -1,0 +1,71 @@
+{
+    "export_stride": 100,
+    "probes_n_rows": 2,
+    "probes_n_columns": 3,
+    "probes_offset": 4,
+    "probes_size": 4,
+    "simulation": {
+        "path": "/home/ramos/phiflow/storage/baseline_box_inflow/",
+        "n_steps": 7501,
+        "re": 3000,
+        "tripping_on": false,
+        "obs_density": 0.3,
+        "reference_velocity": 3,
+        "inflow_on": true,
+        "dt": 0.05,
+        "obs_type": "box",
+        "obs_width": 20,
+        "obs_height": 6,
+        "time_step_scheme": "RK2",
+        "domain_size": [
+            175,
+            110
+        ],
+        "obs_xy": [
+            120,
+            50
+        ],
+        "sponge_intensity": 0.05,
+        "sponge_size": [
+            0,
+            5,
+            5,
+            5
+        ],
+        "obs_mass": 36.0,
+        "obs_inertia": 4000
+    },
+    "export_vars": [
+        "pressure",
+        "vx",
+        "vy",
+        "obs_mask",
+        "obs_xy",
+        "obs_vx",
+        "obs_vy",
+        "control_force_x",
+        "control_force_y",
+        "fluid_force_x",
+        "fluid_force_y",
+        "probes_vx",
+        "probes_vy",
+        "probes_points",
+        "reference_x",
+        "reference_y",
+        "loss",
+        "loss_velocity",
+        "loss_spatial",
+        "error_x",
+        "error_y",
+        "loss_ang",
+        "loss_ang_vel",
+        "vorticity",
+        "cfl",
+        "fluid_torque",
+        "control_torque",
+        "obs_ang",
+        "obs_ang_vel",
+        "reference_ang",
+        "error_ang"
+    ]
+}
