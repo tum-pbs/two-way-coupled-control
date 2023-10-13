@@ -1,6 +1,8 @@
 # Control of Two-way Coupled Fluid Systems with Differentiable Solvers
 
-This is a modified version of the differentiable solver  [Φ<sub>Flow</sub>](https://github.com/tum-pbs/PhiFlow) designed to investigate how differentiable solvers can be used to train neural networks to act as controllers in an unsupervised way for a fluid system with two-way coupling.
+
+This is the source code for [our paper on learning two-way control with differentiable solvers](https://ge.in.tum.de/download/two-way-control.pdf).
+The code is a modified version of [Φ<sub>Flow</sub>](https://github.com/tum-pbs/PhiFlow) designed to investigate how differentiable solvers can be used to train neural networks to act as controllers in an unsupervised way for a fluid system with two-way coupling.
 
 <br>
 <p align="center">
