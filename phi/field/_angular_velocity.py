@@ -1,4 +1,6 @@
-from collections import Callable
+#from collections import Callable
+# for newer python versions: 3.8+
+from typing import Callable
 
 from phi import math
 
