@@ -4,10 +4,13 @@ from turtle import position
 # from Dataset import Dataset
 import numpy as np
 import json
+
+os.chdir("../../") # run from two-way-coupled-control/ directory
 from neural_control.InputsManager import InputsManager
 
 if __name__ == "__main__":
-    root = os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../../")
+    #root = os.path.abspath(os.path.dirname(os.path.abspath(__file__)) + "/../../")
+    root = "." # run in main directory
     randomGenerator = np.random.RandomState()
     tests = dict(
         test1=dict(
