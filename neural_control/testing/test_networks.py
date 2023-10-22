@@ -1,8 +1,6 @@
 import time
 import argparse
-
 import os
-os.chdir("../../")
 
 from neural_control.InputsManager import InputsManager, RLInputsManager
 from neural_control.misc.misc_funcs import *

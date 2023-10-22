@@ -141,7 +141,6 @@ setup(
               'phi.struct',
               'phi.tf',
               'phi.torch',
-              'webglviewer',
               'neural_control',
               'neural_control.neural_networks.rl',
               'neural_control.misc',

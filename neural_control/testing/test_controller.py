@@ -1,8 +1,6 @@
 import time
 import argparse
-
 import os
-os.chdir("../../")
 
 from InputsManager import InputsManager
 from neural_control.linear_controllers.LSController import LSController

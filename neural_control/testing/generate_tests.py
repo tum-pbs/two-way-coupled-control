@@ -4,8 +4,6 @@ from turtle import position
 # from Dataset import Dataset
 import numpy as np
 import json
-
-os.chdir("../../") # run from two-way-coupled-control/ directory
 from neural_control.InputsManager import InputsManager
 
 if __name__ == "__main__":

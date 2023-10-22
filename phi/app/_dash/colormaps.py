@@ -5,6 +5,9 @@ import warnings
 import numpy as np
 from matplotlib.colors import ListedColormap
 
+from matplotlib._cm_listed import cmaps as cmaps_listed
+cmap_d = {**cmaps_listed}
+
 ORANGE_WHITE_BLUE = [
     [0.      ,  22.00000005,   1.00000035,  76.0000011 ],
     [0.030334,  28.999875  ,   5.999997  , 114.9999    ],
@@ -90,7 +93,7 @@ COLORMAPS = {
 # --- Load available Matplotlib color maps ---
 try:
     from matplotlib import cm
-    for name, colormap in cm.cmap_d.items():
+    for name, colormap in cmap_d.items():
         if isinstance(colormap, ListedColormap):
             pos = np.expand_dims(np.linspace(0, 1, len(cm.get_cmap(name).colors)), axis=-1)
             cols = np.array(cm.get_cmap(name).colors) * 255
